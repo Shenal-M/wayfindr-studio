@@ -4,7 +4,7 @@
 # To make this agent available, merge this file into the default repository branch.
 # For format details, see: https://gh.io/customagents/config
 
-name: Wayfindr Studio Developer Agent
+name: Wayfindr-Studio-Developer-Agent
 description: Specialized agent for the Wayfindr Studio Next.js website with Sanity CMS integration, handling UI/UX components, content management, and animation implementations.
 ---
 
