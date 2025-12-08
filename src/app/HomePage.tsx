@@ -84,9 +84,9 @@ const HomePage: React.FC<Props> = ({
 
               <div className="border-t border-brand-border pt-4 px-6 md:px-12">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 md:gap-4">
-                  <h3 className="font-sans text-3xl md:text-4xl font-semibold transition-colors duration-300 group-hover:text-brand-blue">
+                  <h2 className="font-sans text-3xl md:text-6xl font-medium transition-colors duration-300 group-hover:text-brand-blue">
                     {projects[0].title}
-                  </h3>
+                  </h2>
                   <div className="flex flex-wrap gap-2 md:justify-end">
                     {projects[0].services.map((service, sIndex) => (
                       <span
