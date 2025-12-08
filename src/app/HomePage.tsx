@@ -66,8 +66,102 @@ const HomePage: React.FC<Props> = ({
         </div>
       </section>
 
+      <section className="bg-brand-white">
+        {/* First project - full width */}
+        {projects.length > 0 && (
+          <Link
+            href={`/work/${projects[0].slug}`}
+            key={projects[0].slug}
+            className="group block"
+          >
+            <div className="relative overflow-hidden w-full aspect-[4/3] md:aspect-auto md:min-h-[85vh] bg-brand-offwhite">
+                <img
+                  src={projects[0].thumbnail}
+                  alt={projects[0].title}
+                  className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
+                />
+              </div>
 
+              <div className="border-t border-brand-border pt-4 px-6 md:px-12">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 md:gap-4">
+                  <h3 className="font-sans text-3xl md:text-4xl font-semibold transition-colors duration-300 group-hover:text-brand-blue">
+                    {projects[0].title}
+                  </h3>
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    {projects[0].services.map((service, sIndex) => (
+                      <span
+                        key={sIndex}
+                        className="px-3 py-1 rounded-full border border-brand-border text-xs font-medium text-brand-graphite uppercase tracking-wider bg-transparent transition-all duration-300 group-hover:border-brand-blue group-hover:text-brand-blue"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+          </Link>
+        )}
 
+        <div className="px-6 md:px-12 pt-12">
+          <div className="max-w-[1920px] mx-auto">
+            {/* Remaining projects - grid layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
+            {projects.slice(1, 3).map((project, index) => (
+              <Link
+                href={`/work/${project.slug}`}
+                key={project.slug}
+                className={`group block ${index % 2 !== 0 ? "md:mt-24" : ""}`}
+              >
+                <div className="relative overflow-hidden mb-3 aspect-[4/3] bg-brand-offwhite">
+                  <img
+                    src={project.thumbnail}
+                    alt={project.title}
+                    className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3 pt-2">
+                  <div className="flex justify-between items-baseline">
+                    <h3 className="font-sans text-3xl md:text-4xl font-semibold transition-colors duration-300 group-hover:text-brand-blue">
+                      {project.title}
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {project.services.map((service, sIndex) => (
+                      <span
+                        key={sIndex}
+                        className="px-3 py-1 rounded-full border border-brand-border text-xs font-medium text-brand-graphite uppercase tracking-wider bg-transparent transition-all duration-300 group-hover:border-brand-blue group-hover:text-brand-blue"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </Link>
+            ))}
+            </div>
+
+            {/* View All button at the bottom */}
+            <div className="flex justify-center mt-12 mb-12">
+            <Link
+              href="/work"
+              className="group relative inline-flex items-center gap-2 px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-widest text-brand-black bg-transparent border border-brand-black rounded-full overflow-hidden transition-all duration-300 hover:text-brand-white hover:border-brand-blue active:scale-95"
+            >
+              <span className="absolute inset-0 bg-brand-blue transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10">View All</span>
+              <svg 
+                className="relative z-10 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="py-12 border-t border-b border-brand-border bg-brand-offwhite overflow-hidden">
         <div className="flex animate-[scrollMarquee_30s_linear_infinite]">
@@ -125,67 +219,6 @@ const HomePage: React.FC<Props> = ({
             >
               Our Philosophy
             </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 px-6 md:px-12 bg-brand-white border-t border-brand-border">
-        <div className="max-w-[1920px] mx-auto">
-          <div className="flex justify-between items-center mb-12 pb-4">
-            <h2 className="font-sans text-sm font-bold uppercase tracking-widest">
-              Featured Work
-            </h2>
-            <Link
-              href="/work"
-              className="group relative inline-flex items-center gap-2 px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-widest text-brand-black bg-transparent border border-brand-black rounded-full overflow-hidden transition-all duration-300 hover:text-brand-white hover:border-brand-blue active:scale-95"
-            >
-              <span className="absolute inset-0 bg-brand-blue transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
-              <span className="relative z-10">View All</span>
-              <svg 
-                className="relative z-10 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
-            {projects.slice(0, 2).map((project, index) => (
-              <Link
-                href={`/work/${project.slug}`}
-                key={project.slug}
-                className={`group block ${index % 2 !== 0 ? "md:mt-24" : ""}`}
-              >
-                <div className="relative overflow-hidden mb-6 aspect-[4/3] bg-brand-offwhite">
-                  <img
-                    src={project.thumbnail}
-                    alt={project.title}
-                    className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-3 border-t border-brand-border pt-4">
-                  <div className="flex justify-between items-baseline">
-                    <h3 className="font-sans text-2xl md:text-3xl font-bold transition-colors duration-300 group-hover:text-brand-black">
-                      {project.title}
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {project.services.map((service, sIndex) => (
-                      <span
-                        key={sIndex}
-                        className="px-3 py-1 rounded-full border border-brand-border text-xs font-medium text-brand-graphite uppercase tracking-wider bg-transparent transition-all duration-300 group-hover:border-brand-black group-hover:text-brand-black group-hover:translate-y-[-2px]"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>

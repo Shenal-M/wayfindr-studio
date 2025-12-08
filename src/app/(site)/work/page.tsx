@@ -77,10 +77,10 @@ const WorkPage = async () => {
 
               <div className="flex flex-col gap-3 border-t border-brand-border pt-4">
                 <div className="flex justify-between items-baseline">
-                  <h3 className="font-sans text-2xl md:text-3xl font-bold transition-colors duration-300 group-hover:text-brand-black">
+                  <h3 className="font-sans text-2xl md:text-3xl font-bold transition-colors duration-300 group-hover:text-brand-blue">
                     {project.title}
                   </h3>
-                  <span className="text-sm font-sans text-brand-graphite hidden md:inline-block transition-colors duration-300 group-hover:text-brand-black">
+                  <span className="text-sm font-sans text-brand-graphite hidden md:inline-block transition-colors duration-300 group-hover:text-brand-blue">
                     {project.year}
                   </span>
                 </div>
@@ -88,7 +88,7 @@ const WorkPage = async () => {
                   {project.services.map((service, sIndex) => (
                     <span
                       key={sIndex}
-                      className="px-3 py-1 rounded-full border border-brand-border text-xs font-medium text-brand-graphite uppercase tracking-wider bg-transparent transition-all duration-300 group-hover:border-brand-black group-hover:text-brand-black group-hover:translate-y-[-2px]"
+                      className="px-3 py-1 rounded-full border border-brand-border text-xs font-medium text-brand-graphite uppercase tracking-wider bg-transparent transition-all duration-300 group-hover:border-brand-blue group-hover:text-brand-blue"
                     >
                       {service}
                     </span>
