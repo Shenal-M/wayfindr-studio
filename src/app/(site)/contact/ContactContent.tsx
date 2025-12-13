@@ -144,7 +144,7 @@ const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
       <section className="py-24 px-6 md:px-12 max-w-[1920px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
           <div className="md:col-span-4">
-            <h2 className="font-sans text-sm font-bold uppercase tracking-widest sticky top-32">
+            <h2 className="font-sans text-sm font-bold uppercase tracking-widest text-brand-graphite sticky top-32">
               Frequently Asked
               <br />
               Questions

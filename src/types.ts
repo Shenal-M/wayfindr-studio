@@ -38,6 +38,21 @@ export type FAQItem = {
 export type Capability = {
   title: string;
   items: string[];
+  slug?: string;
+};
+
+export type SubService = {
+  title: string;
+  description: string;
+};
+
+export type Service = {
+  title: string;
+  slug: string;
+  description: string;
+  heroImage?: string;
+  subServices: SubService[];
+  order?: number;
 };
 
 export type Stat = {
@@ -54,6 +69,7 @@ export type AgencyPage = {
   establishedYear: string;
   capabilitiesTitle: string;
   capabilities: Capability[];
+  services?: Service[];
   philosophyQuote: string;
   philosophyAttribution: string;
   industriesTitle?: string;

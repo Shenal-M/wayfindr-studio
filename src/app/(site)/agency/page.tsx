@@ -3,10 +3,18 @@ import { client } from "../../../sanity/lib/client";
 import { AGENCY_PAGE_QUERY } from "../../../sanity/lib/queries";
 import type { AgencyPage } from "../../../types";
 import { AGENCY_PAGE_FALLBACK } from "../../../constants";
+import CapabilitiesList from "../../../components/CapabilitiesList";
 
 const AgencyPageComponent = async () => {
   const agencyData = await client.fetch<AgencyPage | null>(AGENCY_PAGE_QUERY);
   const data = agencyData || AGENCY_PAGE_FALLBACK;
+  const capabilitiesData = data.services && data.services.length > 0
+    ? data.services.map((service) => ({
+        title: service.title,
+        slug: service.slug,
+        items: service.subServices?.map((item) => item.title) || [],
+      }))
+    : data.capabilities;
 
   return (
     <div className="w-full bg-brand-white">
@@ -62,65 +70,19 @@ const AgencyPageComponent = async () => {
       <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16">
           <div className="md:col-span-4">
-            <h2 className="font-serif italic text-3xl md:text-4xl text-brand-blue">
+            <h2 className="font-sans text-sm font-bold uppercase tracking-widest text-brand-graphite sticky top-32">
               What We Do
             </h2>
           </div>
           <div className="md:col-span-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16 md:gap-y-20">
-              {data.capabilities.map((capability, index) => {
-                const colors = [
-                  "bg-brand-blue",
-                  "bg-[#FFD700]",
-                  "bg-[#FF69B4]",
-                  "bg-[#00CED1]",
-                  "bg-[#32CD32]",
-                  "bg-[#FF8C00]",
-                ];
-                const colorClass = colors[index % colors.length];
-                
-                const shapes = [
-                  "rounded-full", // circle
-                  "rounded-none rotate-45", // square rotated (diamond)
-                  "rounded-none", // square
-                  "rounded-[50%_50%_0_0]", // semicircle
-                  "rounded-lg", // rounded square
-                  "", // triangle - will use clip-path
-                ];
-                const shapeClass = shapes[index % shapes.length];
-                
-                return (
-                  <div 
-                    key={index} 
-                    className="border-t border-brand-border pt-10 group"
-                  >
-                    <div 
-                      className={`w-14 h-14 ${colorClass} ${shapeClass} mb-8 transition-transform duration-300 group-hover:scale-110`}
-                      style={index % 6 === 5 ? { 
-                        clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)'
-                      } : undefined}
-                    />
-                    <h3 className="font-sans text-3xl md:text-4xl font-bold mb-7 text-brand-black leading-tight tracking-tight">
-                      {capability.title}
-                    </h3>
-                    <ul className="space-y-2.5">
-                      {capability.items.map((item, idx) => (
-                        <li key={idx} className="text-brand-graphite text-sm md:text-base font-medium capitalize tracking-wide">
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
+            <CapabilitiesList capabilities={capabilitiesData} />
           </div>
         </div>
       </section>
 
       {/* Industries Section */}
       {data.industries && data.industries.length > 0 && (
-        <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto border-t border-brand-border">
+        <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16">
             <div className="md:col-span-4">
               <h2 className="font-serif italic text-3xl md:text-4xl text-brand-blue">

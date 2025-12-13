@@ -930,6 +930,94 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // SERVICE DOCUMENT
+    // ═══════════════════════════════════════════════════════════════
+    {
+      name: "service",
+      title: "Service",
+      type: "document",
+      description: "Individual service offerings and their sub-services",
+      fields: [
+        {
+          name: "title",
+          title: "Service Name",
+          type: "string",
+          description: "Primary service title (e.g., Brand Strategy)",
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: "slug",
+          title: "Slug",
+          type: "slug",
+          options: { source: "title", maxLength: 96 },
+          description: "URL-friendly identifier for the service page",
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: "description",
+          title: "Service Description",
+          type: "text",
+          rows: 3,
+          description: "Short overview of the service",
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: "heroImage",
+          title: "Hero Image",
+          type: "image",
+          options: { hotspot: true },
+          description: "Hero image for the service page (recommended 1600px+ wide)",
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: "subServices",
+          title: "Sub-Services",
+          type: "array",
+          description: "Breakdown of offerings within this service",
+          of: [
+            {
+              type: "object",
+              name: "subService",
+              fields: [
+                {
+                  name: "title",
+                  title: "Sub-Service Name",
+                  type: "string",
+                  validation: (Rule) => Rule.required(),
+                },
+                {
+                  name: "description",
+                  title: "Description",
+                  type: "text",
+                  rows: 2,
+                  validation: (Rule) => Rule.required(),
+                },
+              ],
+              preview: {
+                select: { title: "title", subtitle: "description" },
+              },
+            },
+          ],
+          validation: (Rule) => Rule.required().min(1),
+        },
+        {
+          name: "order",
+          title: "Display Order",
+          type: "number",
+          description: "Lower numbers appear first across listings",
+          validation: (Rule) => Rule.integer().positive(),
+        },
+      ],
+      preview: {
+        select: {
+          title: "title",
+          subtitle: "description",
+          media: "heroImage",
+        },
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // PROJECT DOCUMENT
     // ═══════════════════════════════════════════════════════════════
     {

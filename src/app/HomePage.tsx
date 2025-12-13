@@ -82,7 +82,7 @@ const HomePage: React.FC<Props> = ({
                 />
               </div>
 
-              <div className="border-t border-brand-border pt-4 px-6 md:px-12">
+              <div className="border-t border-brand-border pt-6 px-6 md:px-12">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 md:gap-4">
                   <h2 className="font-sans text-3xl md:text-6xl font-medium transition-colors duration-300 group-hover:text-brand-blue">
                     {projects[0].title}

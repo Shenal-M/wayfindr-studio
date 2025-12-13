@@ -39,6 +39,16 @@ export const AGENCY_PAGE_QUERY = groq`*[_type == "agencyPage"][0]{
   establishedYear,
   capabilitiesTitle,
   capabilities,
+  "services": *[_type == "service"] | order(order asc, _createdAt asc){
+    title,
+    "slug": slug.current,
+    description,
+    "heroImage": heroImage.asset->url,
+    subServices[]{
+      title,
+      description
+    }
+  },
   philosophyQuote,
   philosophyAttribution,
   industriesTitle,
@@ -184,6 +194,28 @@ export const PROJECT_BY_SLUG_QUERY = groq`*[_type == "project" && slug.current =
     title,
     "slug": slug.current,
     "thumbnail": thumbnail.asset->url
+  }
+}`;
+
+export const SERVICES_QUERY = groq`*[_type == "service"] | order(order asc, _createdAt asc){
+  title,
+  "slug": slug.current,
+  description,
+  "heroImage": heroImage.asset->url,
+  subServices[]{
+    title,
+    description
+  }
+}`;
+
+export const SERVICE_BY_SLUG_QUERY = groq`*[_type == "service" && slug.current == $slug][0]{
+  title,
+  "slug": slug.current,
+  description,
+  "heroImage": heroImage.asset->url,
+  subServices[]{
+    title,
+    description
   }
 }`;
 
