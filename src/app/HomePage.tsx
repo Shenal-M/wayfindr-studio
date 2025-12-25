@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Brand, Project, Testimonial } from "../../types";
+import type { Brand, Project, Testimonial } from "../types";
 
 type Props = {
   homepageTitle?: string | null;

@@ -6,7 +6,7 @@ const NavigatorIcon: React.FC = () => {
   const [targetRotation, setTargetRotation] = useState(0);
   const [currentRotation, setCurrentRotation] = useState(0);
   const iconRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

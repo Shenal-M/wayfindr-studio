@@ -76,7 +76,7 @@ const CapabilitiesList: React.FC<Props> = ({ capabilities }) => {
           <a
             key={index}
             href={href}
-            ref={(el) => (itemRefs.current[index] = el)}
+            ref={(el) => { itemRefs.current[index] = el; }}
             className="group block py-8 md:py-10"
           >
             {/* Title and Arrow Row */}
