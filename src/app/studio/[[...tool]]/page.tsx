@@ -12,8 +12,6 @@
 import { NextStudio } from "next-sanity/studio";
 import config from "../../../../sanity.config";
 
-export const dynamic = "force-static";
-
 export default function StudioPage() {
   return (
     <div className="min-h-screen bg-black">
