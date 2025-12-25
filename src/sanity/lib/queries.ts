@@ -37,8 +37,6 @@ export const AGENCY_PAGE_QUERY = groq`*[_type == "agencyPage"][0]{
   heroDescription,
   heroBottomText,
   establishedYear,
-  capabilitiesTitle,
-  capabilities,
   "services": *[_type == "service"] | order(order asc, _createdAt asc){
     title,
     "slug": slug.current,
@@ -52,8 +50,18 @@ export const AGENCY_PAGE_QUERY = groq`*[_type == "agencyPage"][0]{
   philosophyQuote,
   philosophyAttribution,
   industriesTitle,
-  industries,
+  "industries": industries[]{
+    name,
+    "iconUrl": icon.asset->url,
+    description
+  },
   stats
+}`;
+
+export const WORK_PAGE_QUERY = groq`*[_type == "workPage"][0]{
+  topLabel,
+  heroTitle,
+  heroDescription
 }`;
 
 // Shared content blocks projection
@@ -213,10 +221,25 @@ export const SERVICE_BY_SLUG_QUERY = groq`*[_type == "service" && slug.current =
   "slug": slug.current,
   description,
   "heroImage": heroImage.asset->url,
+  useCustomServiceImage,
   subServices[]{
     title,
     description
   }
+}`;
+
+export const PROJECTS_BY_SERVICE_TAG_QUERY = groq`*[_type == "project"] | order(order desc, _createdAt desc){
+  title,
+  "slug": slug.current,
+  client,
+  year,
+  services,
+  industry,
+  description,
+  "thumbnail": thumbnail.asset->url,
+  "heroImage": heroImage.asset->url,
+  brief,
+  order
 }`;
 
 

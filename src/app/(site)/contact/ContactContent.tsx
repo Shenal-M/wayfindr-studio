@@ -51,12 +51,28 @@ type Props = {
 const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showBubble, setShowBubble] = useState(false);
 
   const handleEmailClick = async () => {
     try {
       await navigator.clipboard.writeText(contactInfo.email);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setShowBubble(true);
+      setIsHovered(false); // Reset hover state
+      
+      // On mobile/touch devices, show for 1200ms, on desktop keep it for 2s
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const timeout = isMobile ? 1200 : 2000;
+      
+      setTimeout(() => {
+        // Start fading out the bubble
+        setShowBubble(false);
+        
+        // Wait for fade animation to complete (300ms) before changing text
+        setTimeout(() => {
+          setCopied(false);
+        }, 300);
+      }, timeout);
     } catch (err) {
       console.error("Failed to copy email:", err);
     }
@@ -66,60 +82,88 @@ const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
     <div className="w-full bg-brand-white min-h-screen">
       {/* Hero Section */}
       <section className="min-h-[70vh] relative overflow-hidden flex flex-col justify-between">
-        {/* Top label */}
-        <div className="pt-32 px-6 md:px-12 max-w-[1920px] mx-auto w-full">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-brand-graphite">
-            Contact
-          </span>
-        </div>
+        <div className="w-full pt-20 pb-8">
+          {/* Small eyebrow */}
+          <div className="mb-8 px-6 md:px-12 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0s_both]">
+            <span className="text-sm md:text-xs font-medium uppercase tracking-[0.25em] text-brand-graphite">
+              Contact
+            </span>
+          </div>
 
-        {/* Main content */}
-        <div className="px-6 md:px-12 max-w-[1920px] mx-auto w-full relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
-            <div className="md:col-span-7">
-              <h1 className="font-sans font-bold text-[13vw] md:text-[8vw] leading-[0.9] tracking-tighter ">
-                <span className="block overflow-hidden pb-[2vw] -mb-[2vw]">
-                  <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_both]">
-                    Come
-                  </span>
+          {/* Main content wrapper */}
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-12 px-6 md:px-12">
+            <div className="flex-1">
+              {/* Main Headline - Two Lines */}
+              <h1 className="font-sans font-semibold text-[clamp(3.5rem,12vw,11rem)] leading-[0.9] tracking-tighter mb-16 text-brand-black">
+                <span className="block opacity-0 animate-[fadeInUp_0.6s_cubic-bezier(0.33,0,0.2,1)_0.1s_both]">
+                  Come
                 </span>
-                <span className="block overflow-hidden text-brand-blue pb-[2vw] -mb-[2vw]">
-                  <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_0.1s_both]">
-                    Say Hi.
-                  </span>
+                <span className="block opacity-0 animate-[fadeInUp_0.6s_cubic-bezier(0.33,0,0.2,1)_0.2s_both]">
+                  Say Hi.
                 </span>
               </h1>
             </div>
-            <div className="md:col-span-5 pb-4 flex flex-col gap-6">
+
+            {/* Contact Information */}
+            <div className="flex flex-col gap-8 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.35s_both] md:mr-32 md:mb-16 md:pb-0.5">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-brand-graphite mb-2 block">
+                <span className="text-sm md:text-xs font-medium uppercase tracking-widest text-brand-graphite mb-3 block">
                   New Business
                 </span>
                 <button
                   onClick={handleEmailClick}
-                  onMouseEnter={() => setIsHovered(true)}
-                  onMouseLeave={() => setIsHovered(false)}
-                  className="group text-left flex items-center gap-3"
+                  onMouseEnter={() => !copied && setIsHovered(true)}
+                  onMouseLeave={() => !copied && setIsHovered(false)}
+                  className="group text-left flex items-center gap-3 cursor-pointer"
                 >
-                  <div className="text-xl md:text-2xl font-bold text-brand-black transition-colors duration-300 group-hover:text-brand-blue">
-                    {contactInfo.email}
+                  {/* Email text with underline animation */}
+                  <div className="relative">
+                    <span className="text-xl md:text-xl font-semibold text-brand-black transition-all duration-300 group-hover:text-brand-blue">
+                      {contactInfo.email}
+                    </span>
+                    {/* Always visible dashed underline that becomes solid on hover */}
+                    <span className="absolute bottom-0 left-0 right-0 h-[1px] border-b-2 border-dashed border-brand-graphite/30 transition-all duration-300 group-hover:border-brand-blue group-hover:border-solid group-hover:h-[2px]" />
                   </div>
-                  <div 
-                    className="relative px-4 py-2 bg-brand-black text-brand-white text-sm font-medium whitespace-nowrap transition-all duration-300 rounded-full"
-                    style={{ 
-                      opacity: (isHovered || copied) ? 1 : 0,
-                      transform: copied ? 'scale(1.1)' : (isHovered ? 'scale(1)' : 'scale(0.9)')
-                    }}
-                  >
-                    {copied ? "Copied! ✓" : "Click to copy"}
+                  
+                  {/* Container for absolute positioning to prevent layout shift */}
+                  <div className="relative w-0">
+                    {/* Copy bubble on the right */}
+                    <div 
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 px-4 py-2 text-sm font-medium whitespace-nowrap rounded-full bg-brand-black text-brand-white transform transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${
+                        (showBubble || isHovered) 
+                          ? 'opacity-100 translate-x-0' 
+                          : 'opacity-0 -translate-x-2 pointer-events-none'
+                      }`}
+                    >
+                      <div className="relative inline-block -translate-y-0.5">
+                        <span 
+                          className={`block ${
+                            copied 
+                              ? 'opacity-0 -translate-y-full absolute inset-0 hidden' 
+                              : 'opacity-100 translate-y-0 relative'
+                          }`}
+                        >
+                          Click to copy
+                        </span>
+                        <span 
+                          className={`block transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                            copied 
+                              ? 'opacity-100 translate-y-0 relative' 
+                              : 'opacity-0 translate-y-full absolute inset-0'
+                          }`}
+                        >
+                          Done
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </button>
               </div>
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-brand-graphite mb-2 block">
+                <span className="text-sm md:text-xs font-medium uppercase tracking-widest text-brand-graphite mb-3 block">
                   Office
                 </span>
-                <address className="text-lg md:text-xl not-italic font-medium text-brand-graphite max-w-xs ">
+                <address className="text-lg md:text-lg not-italic font-medium text-brand-graphite max-w-xs leading-relaxed">
                   {contactInfo.address}
                 </address>
               </div>
@@ -127,14 +171,21 @@ const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
           </div>
         </div>
 
-        {/* Bottom descriptor */}
-        <div className="pb-12 px-6 md:px-12 max-w-[1920px] mx-auto w-full flex justify-between items-end">
-          <p className="font-serif italic text-brand-graphite text-base md:text-lg max-w-sm">
-            {contactInfo.availabilityText} <span className="text-brand-blue">{contactInfo.availabilityHighlight}</span>.
+        {/* Bottom section - Desktop */}
+        <div className="hidden md:flex pb-12 px-6 md:px-12 w-full justify-between items-end opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.45s_both]">
+          <p className="text-lg font-sans text-brand-graphite">
+            {contactInfo.availabilityText} <span className="font-semibold text-brand-black">{contactInfo.availabilityHighlight}</span>
           </p>
-          <span className="text-xs font-bold uppercase tracking-widest text-brand-graphite hidden md:block">
+          <span className="text-base font-medium text-brand-graphite">
             Get in Touch
           </span>
+        </div>
+
+        {/* Bottom availability text - Mobile */}
+        <div className="md:hidden pb-12 px-6 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.45s_both]">
+          <p className="text-lg font-sans text-brand-graphite">
+            {contactInfo.availabilityText} <span className="font-semibold text-brand-black">{contactInfo.availabilityHighlight}</span>
+          </p>
         </div>
       </section>
 

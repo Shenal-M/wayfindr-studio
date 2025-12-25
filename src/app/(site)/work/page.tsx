@@ -1,58 +1,56 @@
 import React from "react";
 import Link from "next/link";
 import { client } from "../../../sanity/lib/client";
-import { PROJECTS_QUERY } from "../../../sanity/lib/queries";
-import type { Project } from "../../../types";
-import { PROJECTS as FALLBACK_PROJECTS } from "../../../constants";
+import { PROJECTS_QUERY, WORK_PAGE_QUERY } from "../../../sanity/lib/queries";
+import type { Project, WorkPage as WorkPageType } from "../../../types";
+import { PROJECTS as FALLBACK_PROJECTS, WORK_PAGE_FALLBACK } from "../../../constants";
 
 const WorkPage = async () => {
-  const projects = await client.fetch<Project[]>(PROJECTS_QUERY);
+  const [projects, workPageData] = await Promise.all([
+    client.fetch<Project[]>(PROJECTS_QUERY),
+    client.fetch<WorkPageType | null>(WORK_PAGE_QUERY),
+  ]);
   const safeProjects = projects.length ? projects : FALLBACK_PROJECTS;
+  const pageData = workPageData || WORK_PAGE_FALLBACK;
 
   return (
     <div className="w-full bg-brand-white min-h-screen">
       {/* Hero Section */}
       <section className="min-h-[70vh] relative overflow-hidden flex flex-col justify-between">
-        {/* Top label */}
-        <div className="pt-32 px-6 md:px-12 max-w-[1920px] mx-auto w-full">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-brand-graphite">
-            The Work
-          </span>
-        </div>
+        <div className="w-full py-20">
+          {/* Small eyebrow */}
+          <div className="mb-8 px-6 md:px-12 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0s_both]">
+            <span className="text-sm md:text-xs font-medium uppercase tracking-[0.25em] text-brand-graphite">
+              {pageData.topLabel}
+            </span>
+          </div>
 
-        {/* Main content */}
-        <div className="px-6 md:px-12 max-w-[1920px] mx-auto w-full relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
-            <div className="md:col-span-7">
-              <h1 className="font-sans font-bold text-[13vw] md:text-[8vw] leading-[0.9] tracking-tighter uppercase">
-                <span className="block overflow-hidden pb-[2vw] -mb-[2vw]">
-                  <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_both]">
-                    Selected
-                  </span>
-                </span>
-                <span className="block overflow-hidden text-brand-blue pb-[2vw] -mb-[2vw]">
-                  <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_0.1s_both]">
-                    Projects.
-                  </span>
-                </span>
+          {/* Main content wrapper */}
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 px-6 md:px-12">
+            <div className="flex-1">
+              {/* Main Headline */}
+              <h1 className="font-sans font-semibold text-[clamp(3.5rem,12vw,11rem)] leading-[0.9] tracking-tighter mb-16 text-brand-black opacity-0 animate-[fadeInUp_0.6s_cubic-bezier(0.33,0,0.2,1)_0.1s_both]">
+                {pageData.heroTitle}
               </h1>
-            </div>
-            <div className="md:col-span-5 pb-4">
-              <p className="text-lg md:text-xl leading-relaxed font-sans text-brand-graphite max-w-md">
-                A collection of strategic interventions, digital products, and brand identities.
+
+              {/* Subtitle */}
+              <p className="text-lg md:text-lg font-sans text-brand-graphite max-w-4xl leading-relaxed opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.35s_both]">
+                {pageData.heroDescription}
               </p>
+            </div>
+
+            {/* Count indicator - Desktop only */}
+            <div className="hidden md:block text-base font-medium text-brand-graphite pb-2 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.45s_both]">
+              {safeProjects.length} Projects
             </div>
           </div>
         </div>
 
-        {/* Bottom descriptor */}
-        <div className="pb-12 px-6 md:px-12 max-w-[1920px] mx-auto w-full flex justify-between items-end">
-          <p className="font-serif italic text-brand-graphite text-base md:text-lg max-w-sm">
-            Each project is a unique collaboration between <span className="text-brand-blue">strategy</span> and craft.
-          </p>
-          <span className="text-xs font-bold uppercase tracking-widest text-brand-graphite hidden md:block">
+        {/* Count indicator - Mobile only, at bottom */}
+        <div className="md:hidden pb-12 px-6 opacity-0 animate-[fadeInUp_0.4s_cubic-bezier(0.33,0,0.2,1)_0.45s_both]">
+          <div className="text-lg font-medium text-brand-graphite">
             {safeProjects.length} Projects
-          </span>
+          </div>
         </div>
       </section>
 

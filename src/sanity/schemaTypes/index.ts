@@ -109,12 +109,14 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           title: "Hero Headline Line 1",
           type: "string",
           description: "First line of the main headline (e.g., 'Structured')",
+          initialValue: "Structured",
         },
         {
           name: "heroLine2",
           title: "Hero Headline Line 2",
           type: "string",
           description: "Second line of the main headline (e.g., 'Wit.') - appears in blue",
+          initialValue: "Wit.",
         },
         {
           name: "heroDescription",
@@ -122,6 +124,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           type: "text",
           rows: 3,
           description: "Supporting paragraph explaining the agency's approach",
+          initialValue: "We believe that great design exists at the intersection of logic and emotion. We use rigid grids, precise typography, and data-driven strategies—then we break them.",
         },
         {
           name: "heroBottomText",
@@ -129,6 +132,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           type: "text",
           rows: 2,
           description: "Italicized text at the bottom of the hero section",
+          initialValue: "It's this moment of disruption, the \"Wit\", that makes a brand memorable.",
         },
         {
           name: "establishedYear",
@@ -138,55 +142,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           initialValue: "Since 2020",
         },
 
-        // Capabilities Section
-        {
-          name: "capabilitiesTitle",
-          title: "Capabilities Section Title",
-          type: "string",
-          description: "Title for the capabilities section",
-          initialValue: "Capabilities",
-        },
-        {
-          name: "capabilities",
-          title: "Capabilities",
-          type: "array",
-          description: "List of service categories and their offerings",
-          of: [
-            {
-              type: "object",
-              fields: [
-                {
-                  name: "title",
-                  title: "Category Title",
-                  type: "string",
-                  description: "e.g., Brand Strategy, Visual Identity, Digital Experience",
-                  validation: (Rule) => Rule.required(),
-                },
-                {
-                  name: "items",
-                  title: "Services",
-                  type: "array",
-                  description: "List of services under this category (will be displayed as comma-separated text)",
-                  of: [{ type: "string" }],
-                  validation: (Rule) => Rule.required().min(1),
-                },
-              ],
-              preview: {
-                select: {
-                  title: "title",
-                  items: "items",
-                },
-                prepare({ title, items }) {
-                  return {
-                    title: title,
-                    subtitle: items ? `${items.length} services` : "No services",
-                  };
-                },
-              },
-            },
-          ],
-        },
-
         // Philosophy Section
         {
           name: "philosophyQuote",
@@ -194,6 +149,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           type: "text",
           rows: 3,
           description: "The main philosophy or mission statement (displayed large and centered)",
+          initialValue: "We don't just decorate. We solve business problems with aggressive aesthetics.",
         },
         {
           name: "philosophyAttribution",
@@ -209,13 +165,50 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           title: "Industries Section Title",
           type: "string",
           description: "Title for the industries section (optional)",
+          initialValue: "Industries We Work With",
         },
         {
           name: "industries",
           title: "Industries",
           type: "array",
-          description: "Industries you work with (displayed as tags)",
-          of: [{ type: "string" }],
+          description: "Industries you work with (with icons and descriptions)",
+          of: [
+            {
+              type: "object",
+              name: "industry",
+              title: "Industry",
+              fields: [
+                {
+                  name: "name",
+                  title: "Industry Name",
+                  type: "string",
+                  validation: (Rule: any) => Rule.required(),
+                },
+                {
+                  name: "icon",
+                  title: "Icon",
+                  type: "image",
+                  description: "Upload a PNG or SVG icon for this industry",
+                  options: { 
+                    accept: ".png,.svg,.jpg,.jpeg",
+                    hotspot: false 
+                  },
+                },
+                {
+                  name: "description",
+                  title: "Description",
+                  type: "text",
+                  description: "Brief description of the industry",
+                },
+              ],
+              preview: {
+                select: {
+                  title: "name",
+                  media: "icon",
+                },
+              },
+            },
+          ],
         },
 
         // Stats Section (optional)
@@ -227,6 +220,8 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           of: [
             {
               type: "object",
+              name: "stat",
+              title: "Statistic",
               fields: [
                 {
                   name: "number",
@@ -254,6 +249,43 @@ export const schema: { types: SchemaTypeDefinition[] } = {
       preview: {
         prepare() {
           return { title: "Agency Page" };
+        },
+      },
+    },
+
+    // Work Page (singleton)
+    {
+      name: "workPage",
+      title: "Work Page",
+      type: "document",
+      description: "Content for the work/projects page",
+      fields: [
+        {
+          name: "topLabel",
+          title: "Top Label",
+          type: "string",
+          description: "Small label above the headline (e.g., 'Work')",
+          initialValue: "Work",
+        },
+        {
+          name: "heroTitle",
+          title: "Hero Title",
+          type: "string",
+          description: "Main headline (e.g., 'Selected Projects')",
+          initialValue: "Selected Projects",
+        },
+        {
+          name: "heroDescription",
+          title: "Hero Description",
+          type: "text",
+          rows: 3,
+          description: "Supporting paragraph explaining the work",
+          initialValue: "A collection of strategic interventions, digital products, and brand identities. Each project is a unique collaboration between strategy and craft.",
+        },
+      ],
+      preview: {
+        prepare() {
+          return { title: "Work Page" };
         },
       },
     },
@@ -963,11 +995,18 @@ export const schema: { types: SchemaTypeDefinition[] } = {
         },
         {
           name: "heroImage",
-          title: "Hero Image",
+          title: "Service Image",
           type: "image",
           options: { hotspot: true },
-          description: "Hero image for the service page (recommended 1600px+ wide)",
+          description: "Image for the service page. When 'Use Custom Service Image' is enabled, this image will be displayed instead of the default SVG graphic (recommended 1:1 aspect ratio for best results).",
           validation: (Rule) => Rule.required(),
+        },
+        {
+          name: "useCustomServiceImage",
+          title: "Use Custom Service Image",
+          type: "boolean",
+          description: "Toggle to show the service image instead of the default SVG graphic",
+          initialValue: false,
         },
         {
           name: "subServices",

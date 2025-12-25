@@ -25,8 +25,28 @@ export const structure: StructureResolver = (S) =>
             .documentId('homepage')
         ),
       S.divider(),
+      // Agency Page singleton
+      S.listItem()
+        .title('Agency Page')
+        .id('agencyPage')
+        .child(
+          S.document()
+            .schemaType('agencyPage')
+            .documentId('agencyPage')
+        ),
+      S.divider(),
+      // Work Page singleton
+      S.listItem()
+        .title('Work Page')
+        .id('workPage')
+        .child(
+          S.document()
+            .schemaType('workPage')
+            .documentId('workPage')
+        ),
+      S.divider(),
       // Rest of the document types (excluding singletons)
       ...S.documentTypeListItems().filter(
-        (listItem) => !['siteSettings', 'homepage'].includes(listItem.getId() ?? '')
+        (listItem) => !['siteSettings', 'homepage', 'agencyPage', 'workPage'].includes(listItem.getId() ?? '')
       ),
     ])

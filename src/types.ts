@@ -51,6 +51,7 @@ export type Service = {
   slug: string;
   description: string;
   heroImage?: string;
+  useCustomServiceImage?: boolean;
   subServices: SubService[];
   order?: number;
 };
@@ -67,14 +68,18 @@ export type AgencyPage = {
   heroDescription: string;
   heroBottomText: string;
   establishedYear: string;
-  capabilitiesTitle: string;
-  capabilities: Capability[];
   services?: Service[];
   philosophyQuote: string;
   philosophyAttribution: string;
   industriesTitle?: string;
-  industries?: string[];
+  industries?: { name: string; iconUrl: string; description?: string }[];
   stats?: Stat[];
+};
+
+export type WorkPage = {
+  topLabel: string;
+  heroTitle: string;
+  heroDescription: string;
 };
 
 export type ContentBlock =

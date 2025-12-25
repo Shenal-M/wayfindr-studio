@@ -54,7 +54,6 @@ const Navigation: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-4 md:hidden">
-            <NavigatorIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-sm font-bold uppercase tracking-widest z-50 text-brand-black"
@@ -65,22 +64,33 @@ const Navigation: React.FC = () => {
         </div>
       </header>
 
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-brand-white flex flex-col items-center justify-center">
-          <nav className="flex flex-col items-center gap-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.path}
-                className="text-4xl font-sans font-bold tracking-tight text-brand-black hover:text-brand-blue transition-colors"
-                onClick={closeMenu}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
+      <div 
+        className={`fixed inset-0 z-40 bg-brand-white flex flex-col items-center justify-center transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isMenuOpen 
+            ? 'opacity-100 pointer-events-auto' 
+            : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <nav className="flex flex-col items-center gap-8">
+          {navItems.map((item, index) => (
+            <Link
+              key={item.label}
+              href={item.path}
+              className={`text-4xl font-sans font-bold tracking-tight text-brand-black hover:text-brand-blue transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                isMenuOpen 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-2'
+              }`}
+              style={{
+                transitionDelay: isMenuOpen ? `${200 + index * 80}ms` : '0ms'
+              }}
+              onClick={closeMenu}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
     </>
   );
 };

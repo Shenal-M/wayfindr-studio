@@ -1,4 +1,4 @@
-import type { AgencyPage, Brand, FAQItem, Project, SocialLink, Testimonial } from "./types";
+import type { AgencyPage, Brand, FAQItem, Project, SocialLink, Testimonial, WorkPage } from "./types";
 
 export const SOCIAL_LINKS: SocialLink[] = [
   { platform: "Instagram", url: "#" },
@@ -56,33 +56,6 @@ export const AGENCY_PAGE_FALLBACK: AgencyPage = {
   heroBottomText:
     "It's this moment of disruption, the \"Wit\", that makes a brand memorable.",
   establishedYear: "Since 2020",
-  capabilitiesTitle: "Capabilities",
-  capabilities: [
-    {
-      title: "Brand Strategy",
-      items: ["Brand positioning", "market research", "competitive analysis", "brand architecture", "messaging frameworks"],
-    },
-    {
-      title: "Visual Identity",
-      items: ["Logo design", "visual systems", "typography", "color palettes", "brand guidelines"],
-    },
-    {
-      title: "Digital Experience",
-      items: ["UI/UX design", "web development", "mobile apps", "motion design", "interactive prototypes"],
-    },
-    {
-      title: "Brand Activation",
-      items: ["Launch campaigns", "content strategy", "social media", "brand governance", "employee engagement"],
-    },
-    {
-      title: "Verbal Identity",
-      items: ["Brand naming", "tone of voice", "messaging", "copywriting", "editorial guidelines"],
-    },
-    {
-      title: "Creative Direction",
-      items: ["Art direction", "photography", "3D visualization", "video production", "packaging design"],
-    },
-  ],
   services: [
     {
       title: "Brand Strategy",
@@ -90,11 +63,11 @@ export const AGENCY_PAGE_FALLBACK: AgencyPage = {
       description: "Positioning, architecture, and messaging that give the brand a sharp point of view.",
       heroImage: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=1500&fit=crop",
       subServices: [
-        { title: "Brand positioning", description: "Define the promise and territory the brand owns." },
-        { title: "Market research", description: "Insights and competitive mapping to validate direction." },
-        { title: "Competitive analysis", description: "Differentiate with data-backed opportunities." },
-        { title: "Brand architecture", description: "Clarify how products and lines ladder up." },
-        { title: "Messaging frameworks", description: "Codify voice pillars and proof points." },
+        { title: "Brand positioning", description: "Define the promise and territory the brand owns. We develop a clear, differentiated position that resonates with your target audience and creates a distinct space in the competitive landscape." },
+        { title: "Market research", description: "Insights and competitive mapping to validate direction. We conduct comprehensive market analysis, customer interviews, and competitive intelligence to uncover opportunities and validate strategic decisions." },
+        { title: "Competitive analysis", description: "Differentiate with data-backed opportunities. We analyze your competitive landscape to identify gaps, strengths, and opportunities for differentiation that inform positioning and messaging strategies." },
+        { title: "Brand architecture", description: "Clarify how products and lines ladder up. We design brand hierarchies that create clarity and coherence across your portfolio, supporting business objectives while maintaining brand equity." },
+        { title: "Messaging frameworks", description: "Codify voice pillars and proof points. We create comprehensive messaging systems that ensure consistent communication across all touchpoints, aligning teams and partners while maintaining brand integrity." },
       ],
     },
     {
@@ -168,13 +141,43 @@ export const AGENCY_PAGE_FALLBACK: AgencyPage = {
   philosophyAttribution: "The Philosophy",
   industriesTitle: "Industries We Work With",
   industries: [
-    "Retail & Fashion",
-    "Cosmetics & Beauty",
-    "Technology & SaaS",
-    "Finance & Fintech",
-    "Healthcare & Wellness",
-    "B2B Services",
+    {
+      name: "Retail & Fashion",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7ZM9 3V4H15V3H9ZM7 6V19H17V6H7Z'/%3E%3Cpath d='M9 8V17H11V8H9ZM13 8V17H15V8H13Z'/%3E%3C/svg%3E",
+      description: "Elevating retail brands through strategic design and compelling visual narratives.",
+    },
+    {
+      name: "Cosmetics & Beauty",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22S19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5S14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z'/%3E%3C/svg%3E",
+      description: "Beauty brands that stand out with innovative packaging and brand identity.",
+    },
+    {
+      name: "Technology & SaaS",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 2L2 7L12 12L22 7L12 2Z'/%3E%3Cpath d='M2 17L12 22L22 17V12L12 17L2 12V17Z'/%3E%3C/svg%3E",
+      description: "Tech companies with compelling narratives and user-centric design systems.",
+    },
+    {
+      name: "Finance & Fintech",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M11.8 10.9C9.53 10.31 8.8 9.7 8.8 8.75C8.8 7.66 9.81 6.9 11.5 6.9C13.28 6.9 13.94 7.75 14 9H16.21C16.14 7.28 15.09 5.7 13 5.19V3H10V5.16C8.06 5.58 6.5 6.84 6.5 8.77C6.5 10.73 8.26 12 10.8 12.7C13.3 13.4 13.8 14.2 13.8 15.1C13.8 16 13.05 16.9 11.2 16.9C9.16 16.9 8.36 15.9 8.28 14.5H6.07C6.15 16.4 7.5 17.97 10 18.42V21H13V18.47C14.93 18.08 16.5 16.9 16.5 15.1C16.5 12.7 14.2 11.5 11.8 10.9Z'/%3E%3C/svg%3E",
+      description: "Financial services reimagined with trust-building design and clarity.",
+    },
+    {
+      name: "Healthcare & Wellness",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M12 21.35L10.55 20.03C5.4 15.36 2 12.27 2 8.5C2 5.41 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.08C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.41 22 8.5C22 12.27 18.6 15.36 13.45 20.03L12 21.35Z'/%3E%3C/svg%3E",
+      description: "Health brands that inspire trust and communicate care through thoughtful design.",
+    },
+    {
+      name: "B2B Services",
+      iconUrl: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M20 6H16L14 4H10L8 6H4C2.9 6 2 6.9 2 8V19C2 20.1 2.9 21 4 21H20C21.1 21 22 20.1 22 19V8C22 6.9 21.1 6 20 6ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7S17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9S9 10.34 9 12C9 13.66 10.34 15 12 15Z'/%3E%3C/svg%3E",
+      description: "B2B brands that connect and communicate value through strategic design.",
+    },
   ],
+};
+
+export const WORK_PAGE_FALLBACK: WorkPage = {
+  topLabel: "Work",
+  heroTitle: "Selected Projects",
+  heroDescription: "A collection of strategic interventions, digital products, and brand identities. Each project is a unique collaboration between strategy and craft.",
 };
 
 export const FAQS: FAQItem[] = [

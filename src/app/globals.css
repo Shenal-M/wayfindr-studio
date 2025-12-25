@@ -45,6 +45,17 @@ body {
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 @keyframes scrollMarquee {
   0% {
     transform: translateX(0);
