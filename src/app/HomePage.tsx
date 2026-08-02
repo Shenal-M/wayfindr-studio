@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
+import { gsap, useGSAP, ScrollTrigger } from "../lib/gsap";
+import Marquee from "../components/Marquee";
 import type { Brand, Project, Testimonial } from "../types";
 
 type Props = {
@@ -21,40 +23,111 @@ const HomePage: React.FC<Props> = ({
   projects,
   testimonials,
 }) => {
-  const [offsetY, setOffsetY] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const scrollHintRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleScroll = () => setOffsetY(window.scrollY);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  useGSAP(
+    () => {
+      const root = containerRef.current;
+      if (!root) return;
+
+      const mm = gsap.matchMedia();
+
+      // Under reduced motion none of this is created, and the CSS start states
+      // fall back to fully visible.
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        // autoAlpha (not opacity) because CSS hides these with visibility, and
+        // autoAlpha is what flips it back. immediateRender applies the start
+        // state before paint, so the lines are never seen in place first.
+        //
+        // y:0 on both ends is load-bearing. GSAP reads an existing transform
+        // back from the computed matrix as pixels, so if this effect re-runs
+        // (Strict Mode, fast refresh) it would parse the previous pass's
+        // translate as y:158px and animate yPercent on top of it, leaving the
+        // line stranded a full line-height down. Pinning y makes the tween
+        // independent of whatever transform it finds.
+        gsap.fromTo(
+          gsap.utils.toArray<HTMLElement>(".hero-line", root),
+          { yPercent: 100, y: 0, autoAlpha: 0 },
+          {
+            yPercent: 0,
+            y: 0,
+            autoAlpha: 1,
+            duration: 0.8,
+            ease: "expo.out",
+            stagger: 0.1,
+          }
+        );
+
+        gsap.to(scrollHintRef.current, {
+          opacity: 0,
+          ease: "none",
+          scrollTrigger: {
+            trigger: heroRef.current,
+            start: "top top",
+            end: "200px top",
+            scrub: true,
+          },
+        });
+
+        // batch groups whatever crossed the line together, so the offset
+        // second card staggers with its row rather than on its own schedule.
+        ScrollTrigger.batch(
+          gsap.utils.toArray<HTMLElement>("[data-reveal]", root),
+          {
+            start: "top 85%",
+            once: true,
+            onEnter: (elements) =>
+              gsap.to(elements, {
+                opacity: 1,
+                y: 0,
+                duration: 0.9,
+                ease: "power3.out",
+                stagger: 0.12,
+                overwrite: true,
+              }),
+          }
+        );
+      });
+
+      return () => mm.revert();
+    },
+    { scope: containerRef }
+  );
 
   return (
-    <div className="w-full bg-brand-white overflow-hidden">
-      <section className="min-h-[90vh] flex items-end pb-24 px-6 md:px-12 relative">
+    <div ref={containerRef} className="w-full bg-brand-white overflow-hidden">
+      {/* dvh, not vh: vh resolves against the viewport with mobile browser
+          chrome hidden, so on a phone showing its URL bar the section runs past
+          the visible area and takes the scroll cue with it. Subtracting the
+          fixed header makes the hero exactly fill what's on screen, so the cue
+          is always in view. */}
+      <section
+        ref={heroRef}
+        className="min-h-[calc(100dvh-4rem-1px)] flex items-end pb-24 px-6 md:px-12 relative"
+      >
         <div className="max-w-[1920px] mx-auto w-full z-10">
-          <h1 className="font-sans font-extrabold md:font-bold text-[15vw] md:text-[11vw] leading-[0.85] md:leading-[0.9] tracking-tighter text-brand-black uppercase hyphens-auto break-words">
+          {/* Cap the type by height as well as width. Sized on vw alone, a
+              landscape phone (wide but short) renders a ~100px headline whose
+              three lines can't fit the screen, pushing the scroll cue off the
+              bottom. */}
+          <h1 className="font-sans font-extrabold md:font-bold text-[min(15vw,15dvh)] md:text-[min(11vw,20dvh)] leading-[0.85] md:leading-[0.9] tracking-tighter text-brand-black uppercase hyphens-auto break-words">
             <span className="block overflow-hidden pb-[2vw] -mb-[2vw]">
-              <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_both]">
-                {heroLine1 || "Navigating"}
-              </span>
+              <span className="hero-line block">{heroLine1 || "Navigating"}</span>
             </span>
             <span className="block overflow-hidden md:ml-[10vw] pb-[2vw] -mb-[2vw]">
-              <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_0.1s_both]">
-                {heroLine2 || "Brands"}
-              </span>
+              <span className="hero-line block">{heroLine2 || "Brands"}</span>
             </span>
             <span className="block overflow-hidden text-brand-blue pb-[2vw] -mb-[2vw]">
-              <span className="block animate-[slideUp_0.8s_cubic-bezier(0.16,1,0.3,1)_0.2s_both]">
-                {heroLine3 || "Thru Chaos."}
-              </span>
+              <span className="hero-line block">{heroLine3 || "Thru Chaos."}</span>
             </span>
           </h1>
         </div>
 
         <div
+          ref={scrollHintRef}
           className="absolute bottom-8 right-6 md:right-12 text-sm font-bold uppercase tracking-widest text-brand-graphite animate-bounce"
-          style={{ opacity: Math.max(0, 1 - offsetY / 200) }}
         >
           Scroll
         </div>
@@ -66,13 +139,15 @@ const HomePage: React.FC<Props> = ({
           <Link
             href={`/work/${projects[0].slug}`}
             key={projects[0].slug}
-            className="group block"
+            className="group block reveal-init"
+            data-reveal
           >
-            <div className="relative overflow-hidden w-full aspect-[4/3] md:aspect-auto md:min-h-[85vh] bg-brand-offwhite">
+            <div className="relative overflow-hidden w-full aspect-[4/3] md:aspect-auto md:min-h-[94vh] bg-brand-offwhite">
                 <img
                   src={projects[0].thumbnail}
                   alt={projects[0].title}
-                  className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
+                  data-speed="0.97"
+                  className="absolute left-0 w-full h-[120%] -top-[10%] object-cover transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
                 />
               </div>
 
@@ -104,14 +179,22 @@ const HomePage: React.FC<Props> = ({
               <Link
                 href={`/work/${project.slug}`}
                 key={project.slug}
-                className={`group block ${index % 2 !== 0 ? "md:mt-24" : ""}`}
+                className={`group block reveal-init ${index % 2 !== 0 ? "md:mt-24" : ""}`}
+                data-reveal
               >
                 <div className="relative overflow-hidden mb-3 aspect-[4/3] bg-brand-offwhite">
                   <img
                     src={project.thumbnail}
                     alt={project.title}
-                    className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
+                    data-speed="0.97"
+                    className="absolute left-0 w-full h-[120%] -top-[10%] object-cover"
                   />
+                  {/* Hover tint as its own layer rather than a filter on the
+                      image. ScrollSmoother rewrites the image's transform every
+                      frame for the parallax, so anything transitioned on the
+                      image itself ends up easing each of those frames and feels
+                      sluggish; animating opacity here keeps the two apart. */}
+                  <div className="absolute inset-0 bg-brand-black opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-20 pointer-events-none" />
                 </div>
 
                 <div className="flex flex-col gap-3 pt-2">
@@ -136,17 +219,17 @@ const HomePage: React.FC<Props> = ({
             </div>
 
             {/* View All button at the bottom */}
-            <div className="flex justify-center mt-12 mb-12">
+            <div className="flex justify-center mt-12 mb-12 reveal-init" data-reveal>
             <Link
               href="/work"
               className="group relative inline-flex items-center gap-2 px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-widest text-brand-black bg-transparent border border-brand-black rounded-full overflow-hidden transition-all duration-300 hover:text-brand-white hover:border-brand-blue active:scale-95"
             >
               <span className="absolute inset-0 bg-brand-blue transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
               <span className="relative z-10">View All</span>
-              <svg 
-                className="relative z-10 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <svg
+                className="relative z-10 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -158,51 +241,11 @@ const HomePage: React.FC<Props> = ({
       </section>
 
       <section className="py-12 border-t border-b border-brand-border bg-brand-offwhite overflow-hidden">
-        <div className="flex animate-[scrollMarquee_30s_linear_infinite]">
-          {/* First set */}
-          {[...brands, ...brands].map((brand, i) => (
-            <span
-              key={`${brand.id}-${i}`}
-              className="mx-8 md:mx-16 select-none flex items-center justify-center flex-shrink-0"
-            >
-              {brand.logoUrl ? (
-                <img 
-                  src={brand.logoUrl} 
-                  alt={brand.name}
-                  className="h-8 md:h-12 w-auto object-contain opacity-40"
-                />
-              ) : (
-                <span className="font-sans font-bold text-4xl md:text-6xl text-brand-graphite opacity-30 uppercase whitespace-nowrap">
-                  {brand.name}
-                </span>
-              )}
-            </span>
-          ))}
-          {/* Duplicate set for seamless loop */}
-          {[...brands, ...brands].map((brand, i) => (
-            <span
-              key={`${brand.id}-${i}-dup`}
-              className="mx-8 md:mx-16 select-none flex items-center justify-center flex-shrink-0"
-              aria-hidden="true"
-            >
-              {brand.logoUrl ? (
-                <img 
-                  src={brand.logoUrl} 
-                  alt={brand.name}
-                  className="h-8 md:h-12 w-auto object-contain opacity-40"
-                />
-              ) : (
-                <span className="font-sans font-bold text-4xl md:text-6xl text-brand-graphite opacity-30 uppercase whitespace-nowrap">
-                  {brand.name}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
+        <Marquee brands={brands} />
       </section>
 
       <section className="py-32 px-6 md:px-12 bg-brand-white">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="max-w-4xl mx-auto text-center reveal-init" data-reveal>
           <p className="text-2xl md:text-4xl leading-tight font-sans font-medium text-brand-black">
             Wayfindr Studio is a strategic design agency. We combine <span className="font-serif italic font-normal">Swiss precision</span> with unexpected wit to build high-end digital experiences for reliable brands.
           </p>
@@ -224,9 +267,13 @@ const HomePage: React.FC<Props> = ({
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {testimonials.map((t, i) => (
-              <div key={i} className="flex flex-col justify-between">
+              <div
+                key={i}
+                className="flex flex-col justify-between reveal-init"
+                data-reveal
+              >
                 <blockquote className="font-serif text-2xl text-brand-black leading-relaxed mb-8">
-                  "{t.quote}"
+                  &ldquo;{t.quote}&rdquo;
                 </blockquote>
                 <div>
                   <cite className="not-italic font-bold font-sans text-brand-black block">
@@ -246,5 +293,3 @@ const HomePage: React.FC<Props> = ({
 };
 
 export default HomePage;
-
-

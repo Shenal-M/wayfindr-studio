@@ -1,5 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
-
+/* Don't reintroduce an @import url(...) for webfonts here — Tailwind v4's
+   bundler inlines @import rules and drops remote ones, so it compiles away
+   silently and the page falls back to system-ui with no warning. The fonts are
+   loaded and self-hosted via next/font in src/app/layout.tsx. */
 @import "tailwindcss";
 
 @theme inline {
@@ -9,8 +11,11 @@
   --color-brand-offwhite: #f5f5f7;
   --color-brand-graphite: #4a4a4a;
   --color-brand-border: #e5e5e5;
-  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  /* `@theme inline` matters here: it inlines these values so they resolve
+     against the next/font variables set on <html>, rather than being copied
+     into a :root block that would evaluate before those exist. */
+  --font-sans: var(--font-plus-jakarta-sans), system-ui, sans-serif;
+  --font-serif: var(--font-playfair-display), Georgia, "Times New Roman", serif;
 }
 
 body {
@@ -34,14 +39,34 @@ body {
   scrollbar-width: none;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
+/* Start states for GSAP entrance animations.
+   GSAP runs in useLayoutEffect, which fires after the browser has painted the
+   SSR'd HTML — so animating with gsap.from() would flash the final state first.
+   Holding the start state in CSS instead means the element is never painted in
+   its end position. A <noscript> override in the root layout restores these
+   to visible when scripting is off, so the content is never stranded. */
+.reveal-init {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+/* Deliberately NOT a transform. GSAP reads the computed transform as a pixel
+   matrix, so a translateY(100%) here would be parsed as y:180px and then the
+   tween's yPercent would stack on top of it, leaving the line permanently
+   offset by a line height. Hiding it instead lets GSAP own the transform
+   outright; the tween restores visibility via autoAlpha. */
+.hero-line {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-init {
     opacity: 1;
+    transform: none;
+  }
+
+  .hero-line {
+    visibility: visible;
   }
 }
 
@@ -53,15 +78,6 @@ body {
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes scrollMarquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
   }
 }
 

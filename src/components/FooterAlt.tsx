@@ -39,9 +39,19 @@ type Props = {
   email: string;
   aboutText?: string;
   logoSvg?: string;
+  /** Intrinsic size of the logo, used only to reserve layout space. */
+  logoWidth?: number;
+  logoHeight?: number;
 };
 
-const FooterAlt = ({ socialLinks, email, aboutText, logoSvg }: Props) => {
+const FooterAlt = ({
+  socialLinks,
+  email,
+  aboutText,
+  logoSvg,
+  logoWidth,
+  logoHeight,
+}: Props) => {
   const [copied, setCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -56,7 +66,14 @@ const FooterAlt = ({ socialLinks, email, aboutText, logoSvg }: Props) => {
   };
 
   return (
-    <footer className="bg-brand-black text-brand-white w-full py-20 mt-auto">
+    // The shadow is a seam guard, not decoration. ScrollSmoother transforms
+    // #smooth-content, but the browser's scrollHeight is a whole number while
+    // the content's height is fractional — so at maximum scroll the content
+    // can stop a fraction of a pixel short of the viewport bottom, exposing a
+    // hairline of the white body background. Painting the footer's own colour
+    // a few pixels past its box covers that without touching layout or
+    // scroll height.
+    <footer className="bg-brand-black text-brand-white w-full py-20 mt-auto shadow-[0_4px_0_0_var(--color-brand-black)]">
       <div className="max-w-[1920px] mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-12 pb-12 border-b border-gray-800">
           <h4 className="md:col-span-2 text-xs font-bold uppercase tracking-[0.3em] text-gray-500">
@@ -115,7 +132,32 @@ const FooterAlt = ({ socialLinks, email, aboutText, logoSvg }: Props) => {
       <div className="mt-0 mb-16 w-full px-6 md:px-12">
         {logoSvg ? (
           <div className="w-full overflow-hidden">
-            <img src={logoSvg} alt="Wayfindr" className="w-full h-auto" style={{ maxWidth: '100%', display: 'block' }} />
+            {/* width/height are the intrinsic SVG size, not a display size —
+                the CSS below still scales it to the container. They give the
+                browser an aspect ratio so the correct height is reserved
+                before the file downloads; without them this collapses to zero
+                height and then grows the page ~300px on load, which reads as
+                the footer stuttering as you reach it. */}
+            <img
+              src={logoSvg}
+              alt="Wayfindr"
+              width={logoWidth}
+              height={logoHeight}
+              className="w-full h-auto"
+              style={{
+                maxWidth: '100%',
+                display: 'block',
+                // Give the wordmark its own compositing layer. It's an SVG
+                // blown up ~4.5x, and ScrollSmoother translates the page by
+                // fractional pixels every frame — without a layer the browser
+                // re-rasterises those thin letterforms at a new sub-pixel
+                // phase each frame and they visibly shimmer while scrolling.
+                // Promoted, it is rasterised once and only translated.
+                willChange: 'transform',
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden',
+              }}
+            />
           </div>
         ) : (
           <h2 className="font-sans font-extrabold text-[19vw] md:text-[21vw] leading-none text-white whitespace-nowrap overflow-hidden">

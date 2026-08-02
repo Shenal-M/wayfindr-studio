@@ -22,7 +22,10 @@ const Navigation: React.FC = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-brand-white/80 backdrop-blur-md border-b border-brand-border">
-        <div className="max-w-[1920px] mx-auto px-6 md:px-12 h-20 flex items-center justify-between">
+        {/* Keep this in step with the matching pt-* on <main> in
+            (site)/layout.tsx — the header is fixed, so that padding is the
+            only thing stopping page content from sliding underneath it. */}
+        <div className="max-w-[1920px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
           <Link
             href="/"
             className="text-xl md:text-2xl font-bold font-sans tracking-tighter text-brand-black z-50 relative"
