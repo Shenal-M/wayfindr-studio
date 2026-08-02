@@ -41,7 +41,6 @@ export default async function Home() {
 
   return (
     <HomePage
-      homepageTitle={homepage?.title}
       heroLine1={homepage?.heroLine1}
       heroLine2={homepage?.heroLine2}
       heroLine3={homepage?.heroLine3}

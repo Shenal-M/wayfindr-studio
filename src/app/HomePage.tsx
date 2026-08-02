@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { Brand, Project, Testimonial } from "../types";
 
 type Props = {
-  homepageTitle?: string | null;
   heroLine1?: string | null;
   heroLine2?: string | null;
   heroLine3?: string | null;
@@ -15,7 +14,6 @@ type Props = {
 };
 
 const HomePage: React.FC<Props> = ({
-  homepageTitle: rawHomepageTitle,
   heroLine1,
   heroLine2,
   heroLine3,
@@ -23,10 +21,6 @@ const HomePage: React.FC<Props> = ({
   projects,
   testimonials,
 }) => {
-  const homepageTitle =
-    typeof rawHomepageTitle === "string" && rawHomepageTitle.trim().length > 0
-      ? rawHomepageTitle
-      : undefined;
   const [offsetY, setOffsetY] = useState(0);
 
   useEffect(() => {
