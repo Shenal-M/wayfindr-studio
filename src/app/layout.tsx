@@ -35,15 +35,43 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${playfairDisplay.variable}`}
+      // `anim` arms the CSS start states for GSAP's entrance animations — see
+      // the .anim rules in globals.css.
+      //
+      // It ships in the server-rendered HTML rather than being added by the
+      // script below, for two reasons. It applies before the first paint, so
+      // content is never seen in its final position and then hidden. And it
+      // matches what React hydrates against: a script that adds a class to
+      // <html> mutates the element before hydration, and React compares the
+      // server's className to the live one and reports a mismatch it refuses to
+      // patch up. Rendering the class server-side means there is nothing to
+      // reconcile, which is a real fix rather than a suppressHydrationWarning
+      // papering over one.
+      className={`${plusJakartaSans.variable} ${playfairDisplay.variable} anim`}
     >
       <head>
-        {/* GSAP's entrance animations keep their start state in CSS to avoid a
-            flash of the final state, which would leave content permanently
-            hidden if the animations never run. This only renders when
-            scripting is off, so there is nothing for React to hydrate. */}
+        {/* Failsafe for the gate above, and nothing else — it deliberately
+            mutates no DOM at parse time.
+
+            src/lib/gsap.ts sets __gsapReady the moment it evaluates, so a bundle
+            that loads normally clears this long before the timer fires. If it
+            fires with the flag still unset, the client JS never ran and the
+            hidden content would be stranded, so the gate comes off. Keyed on the
+            flag rather than a bare timeout because reveals below the fold are
+            legitimately still waiting at this point, and un-hiding those would
+            break them.
+
+            The removal happens seconds after hydration, so it can't cause a
+            mismatch. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `setTimeout(function(){window.__gsapReady||document.documentElement.classList.remove('anim')},4000)`,
+          }}
+        />
+        {/* With scripting off the failsafe above never runs, so the start states
+            are neutralised here instead. */}
         <noscript>
-          <style>{`.reveal-init{opacity:1!important;transform:none!important}.hero-line{visibility:visible!important}`}</style>
+          <style>{`.anim .reveal-init{opacity:1!important;transform:none!important}.anim .hero-line{visibility:visible!important}`}</style>
         </noscript>
       </head>
       {/* suppressHydrationWarning covers attributes that browser extensions

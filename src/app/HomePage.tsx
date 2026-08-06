@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import Link from "next/link";
 import { gsap, useGSAP, ScrollTrigger } from "../lib/gsap";
+import Button from "../components/Button";
 import Marquee from "../components/Marquee";
 import type { Brand, Project, Testimonial } from "../types";
 
@@ -24,7 +25,6 @@ const HomePage: React.FC<Props> = ({
   testimonials,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
   const scrollHintRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -47,9 +47,14 @@ const HomePage: React.FC<Props> = ({
         // translate as y:158px and animate yPercent on top of it, leaving the
         // line stranded a full line-height down. Pinning y makes the tween
         // independent of whatever transform it finds.
+        // 101, not 100: the line's border box and the mask's clip region are
+        // the same height by construction (see the markup), so 100 lands the
+        // two edges exactly flush and a fractional-pixel layout can let a
+        // hairline of the glyph tops survive. The extra 1% is ~1px and
+        // invisible, but it guarantees the line starts fully clipped.
         gsap.fromTo(
           gsap.utils.toArray<HTMLElement>(".hero-line", root),
-          { yPercent: 100, y: 0, autoAlpha: 0 },
+          { yPercent: 101, y: 0, autoAlpha: 0 },
           {
             yPercent: 0,
             y: 0,
@@ -60,13 +65,19 @@ const HomePage: React.FC<Props> = ({
           }
         );
 
+        // Absolute scroll positions rather than a trigger + offsets. Two
+        // reasons: the hero's top is 65px down the page (the fixed header's
+        // worth of padding on <main>), so "top top" didn't start the fade until
+        // 65px of scroll and finished at 265px — never the intent. And keying
+        // off measured element geometry means every ScrollTrigger.refresh()
+        // recomputes the range; with numbers there is nothing to re-measure, so
+        // a refresh can't make the cue fade at a different point or reappear.
         gsap.to(scrollHintRef.current, {
           opacity: 0,
           ease: "none",
           scrollTrigger: {
-            trigger: heroRef.current,
-            start: "top top",
-            end: "200px top",
+            start: 0,
+            end: 200,
             scrub: true,
           },
         });
@@ -98,38 +109,70 @@ const HomePage: React.FC<Props> = ({
 
   return (
     <div ref={containerRef} className="w-full bg-brand-white overflow-hidden">
-      {/* dvh, not vh: vh resolves against the viewport with mobile browser
-          chrome hidden, so on a phone showing its URL bar the section runs past
-          the visible area and takes the scroll cue with it. Subtracting the
-          fixed header makes the hero exactly fill what's on screen, so the cue
-          is always in view. */}
-      <section
-        ref={heroRef}
-        className="min-h-[calc(100dvh-4rem-1px)] flex items-end pb-24 px-6 md:px-12 relative"
-      >
-        <div className="max-w-[1920px] mx-auto w-full z-10">
+      {/* A full-screen hero on every breakpoint, with the headline and the
+          scroll cue anchored to the bottom of it — min-h sets the height,
+          justify-end pushes the content column down, and the cue is the last
+          item in that column.
+
+          Two details make this safe where the original wasn't:
+
+          svh, not dvh. dvh retracks as the mobile URL bar collapses, so it
+          changes mid-scroll — which resized the hero AND (below) the headline's
+          font size while a gesture was in flight, moving every measurement
+          ScrollSmoother and its triggers were part-way through using. svh is the
+          smallest viewport height, the URL-bar-shown case, and it never changes
+          while scrolling. When the bar retracts you get a little of the next
+          section showing under the cue, which is fine.
+
+          And the cue is an ordinary flex item, not `absolute bottom-8`. That
+          matters because min-h is a *minimum*: if the type ever outgrows it the
+          section simply gets taller, and the cue stays attached below the
+          headline instead of being stranded at a bottom edge the content has
+          already passed. The height and the cue's placement are no longer the
+          same problem, which is what made this fragile before. */}
+      <section className="flex flex-col justify-end min-h-[calc(100svh-4rem-1px)] pt-16 pb-8 px-6 md:px-12">
+        {/* The gap is clear space, not a guess: leading-[0.85] puts the baseline
+            essentially on the h1's box edge, and the type is uppercase so there
+            are no descenders reaching into it. Wider on desktop to keep the
+            same rhythm the old absolute offsets produced at that type size. */}
+        <div className="max-w-[1920px] mx-auto w-full flex flex-col gap-8 md:gap-12">
           {/* Cap the type by height as well as width. Sized on vw alone, a
-              landscape phone (wide but short) renders a ~100px headline whose
-              three lines can't fit the screen, pushing the scroll cue off the
-              bottom. */}
-          <h1 className="font-sans font-extrabold md:font-bold text-[min(15vw,15dvh)] md:text-[min(11vw,20dvh)] leading-[0.85] md:leading-[0.9] tracking-tighter text-brand-black uppercase hyphens-auto break-words">
+              landscape phone (wide but short) renders a ~125px headline whose
+              three lines are taller than the screen on their own — which would
+              outgrow the section's min-h and push the cue below the fold.
+
+              svh and not dvh, for the same reason as the section: dvh would
+              resize the type, and so reflow the whole page, every time the URL
+              bar moved. */}
+          <h1 className="font-sans font-extrabold md:font-bold text-[min(15vw,15svh)] md:text-[min(11vw,20svh)] leading-[0.85] md:leading-[0.9] tracking-tighter text-brand-black uppercase hyphens-auto break-words">
+            {/* The pb/-mb pair appears on BOTH the mask and the line, and needs
+                to. On the mask it extends the clip region so descenders aren't
+                sliced off. On the line it grows the element's own border box by
+                the same amount, which is what yPercent measures against — sized
+                only to the line box, yPercent:100 leaves the line's top sitting
+                2vw above the clip's bottom edge and the tops of the letters
+                show through before the reveal. The negative margins keep the
+                collapsed layout identical to a plain stack of lines. */}
             <span className="block overflow-hidden pb-[2vw] -mb-[2vw]">
-              <span className="hero-line block">{heroLine1 || "Navigating"}</span>
+              <span className="hero-line block pb-[2vw] -mb-[2vw]">{heroLine1 || "Navigating"}</span>
             </span>
             <span className="block overflow-hidden md:ml-[10vw] pb-[2vw] -mb-[2vw]">
-              <span className="hero-line block">{heroLine2 || "Brands"}</span>
+              <span className="hero-line block pb-[2vw] -mb-[2vw]">{heroLine2 || "Brands"}</span>
             </span>
             <span className="block overflow-hidden text-brand-blue pb-[2vw] -mb-[2vw]">
-              <span className="hero-line block">{heroLine3 || "Thru Chaos."}</span>
+              <span className="hero-line block pb-[2vw] -mb-[2vw]">{heroLine3 || "Thru Chaos."}</span>
             </span>
           </h1>
-        </div>
 
-        <div
-          ref={scrollHintRef}
-          className="absolute bottom-8 right-6 md:right-12 text-sm font-bold uppercase tracking-widest text-brand-graphite animate-bounce"
-        >
-          Scroll
+          {/* self-end keeps it right-aligned to the same 1920px column as the
+              headline, which is what the old `right-6 md:right-12` approximated
+              by measuring from the section's padding edge instead. */}
+          <div
+            ref={scrollHintRef}
+            className="self-end text-sm font-bold uppercase tracking-widest text-brand-graphite animate-bounce"
+          >
+            Scroll
+          </div>
         </div>
       </section>
 
@@ -143,11 +186,21 @@ const HomePage: React.FC<Props> = ({
             data-reveal
           >
             <div className="relative overflow-hidden w-full aspect-[4/3] md:aspect-auto md:min-h-[94vh] bg-brand-offwhite">
+                {/* transition-[scale,filter], never transition-all. This image
+                    carries data-speed, so ScrollSmoother rewrites its transform
+                    every frame; `all` would ease each of those writes over
+                    500ms and the parallax would visibly chase the scroll
+                    instead of tracking it. Naming the properties keeps the
+                    hover on scale/filter — which Tailwind v4 emits as the
+                    standalone `scale` property, so it composes with GSAP's
+                    transform rather than fighting it — and leaves transform
+                    alone. Same separation the grid images below make with their
+                    tint layer. */}
                 <img
                   src={projects[0].thumbnail}
                   alt={projects[0].title}
                   data-speed="0.97"
-                  className="absolute left-0 w-full h-[120%] -top-[10%] object-cover transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
+                  className="absolute left-0 w-full h-[120%] -top-[10%] object-cover transition-[scale,filter] duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
                 />
               </div>
 
@@ -220,21 +273,7 @@ const HomePage: React.FC<Props> = ({
 
             {/* View All button at the bottom */}
             <div className="flex justify-center mt-12 mb-12 reveal-init" data-reveal>
-            <Link
-              href="/work"
-              className="group relative inline-flex items-center gap-2 px-5 py-2.5 font-sans text-sm font-bold uppercase tracking-widest text-brand-black bg-transparent border border-brand-black rounded-full overflow-hidden transition-all duration-300 hover:text-brand-white hover:border-brand-blue active:scale-95"
-            >
-              <span className="absolute inset-0 bg-brand-blue transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
-              <span className="relative z-10">View All</span>
-              <svg
-                className="relative z-10 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
+              <Button href="/work">View All</Button>
             </div>
           </div>
         </div>
@@ -250,12 +289,9 @@ const HomePage: React.FC<Props> = ({
             Wayfindr Studio is a strategic design agency. We combine <span className="font-serif italic font-normal">Swiss precision</span> with unexpected wit to build high-end digital experiences for reliable brands.
           </p>
           <div className="mt-12">
-            <Link
-              href="/agency"
-              className="inline-block px-8 py-4 border border-brand-black text-brand-black font-bold uppercase tracking-widest hover:bg-brand-black hover:text-white transition-all duration-300"
-            >
+            <Button variant="outlineSquare" href="/agency">
               Our Philosophy
-            </Link>
+            </Button>
           </div>
         </div>
       </section>

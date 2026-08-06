@@ -1,6 +1,39 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Button from "./Button";
+
+/**
+ * The chevrons nudge toward their direction on hover, which is why they carry
+ * `group-hover:` — the `group` lives on Button's glassCircle variant.
+ */
+const CHEVRON_CLASS = "w-5 h-5 md:w-6 md:h-6 transform transition-transform";
+
+const ChevronLeft = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={`${CHEVRON_CLASS} group-hover:-translate-x-0.5`}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+  </svg>
+);
+
+const ChevronRight = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={`${CHEVRON_CLASS} group-hover:translate-x-0.5`}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  </svg>
+);
 
 type Industry = {
   name: string;
@@ -158,94 +191,54 @@ export const IndustriesCarousel = ({ industries }: IndustriesCarouselProps) => {
         </div>
       </div>
 
-      {/* Navigation Arrows - Responsive positioning */}
+      {/* Navigation Arrows - Responsive positioning.
+          Desktop floats them outside the card; mobile stacks them under it. The
+          two pairs are the same button — only the positioning differs, which is
+          why that's all the className carries. */}
+      {/* The positioning lives on wrappers, not on the buttons. glassCircle
+          carries `relative` so its hover panel has a containing block, and
+          passing `absolute` to the same element would leave two position
+          declarations fighting — with `relative` quietly winning, which drops
+          these back into normal flow. */}
       <div className="hidden lg:block">
-        <button
-          onClick={handlePrevious}
-          className="absolute left-0 -translate-x-16 xl:-translate-x-20 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full border border-brand-white/10 bg-brand-white/5 backdrop-blur-sm flex items-center justify-center text-brand-white/50 hover:text-brand-white hover:border-brand-white/30 hover:bg-brand-white/10 transition-all duration-300 z-30 group"
-          aria-label="Previous industry"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 md:w-6 md:h-6 transform group-hover:-translate-x-0.5 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+        <span className="absolute left-0 -translate-x-16 xl:-translate-x-20 top-1/2 -translate-y-1/2 z-30">
+          <Button
+            variant="glassCircle"
+            onClick={handlePrevious}
+            aria-label="Previous industry"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
+            <ChevronLeft />
+          </Button>
+        </span>
 
-        <button
-          onClick={handleNext}
-          className="absolute right-0 translate-x-16 xl:translate-x-20 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full border border-brand-white/10 bg-brand-white/5 backdrop-blur-sm flex items-center justify-center text-brand-white/50 hover:text-brand-white hover:border-brand-white/30 hover:bg-brand-white/10 transition-all duration-300 z-30 group"
-          aria-label="Next industry"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 md:w-6 md:h-6 transform group-hover:translate-x-0.5 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+        <span className="absolute right-0 translate-x-16 xl:translate-x-20 top-1/2 -translate-y-1/2 z-30">
+          <Button
+            variant="glassCircle"
+            onClick={handleNext}
+            aria-label="Next industry"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+            <ChevronRight />
+          </Button>
+        </span>
       </div>
 
       {/* Mobile/Tablet Navigation - Below content, above dots */}
       <div className="flex lg:hidden items-center justify-center gap-4 mt-8 mb-4">
-        <button
+        <Button
+          variant="glassCircle"
           onClick={handlePrevious}
-          className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-brand-white/10 bg-brand-white/5 backdrop-blur-sm flex items-center justify-center text-brand-white/50 hover:text-brand-white hover:border-brand-white/30 hover:bg-brand-white/10 transition-all duration-300 group"
           aria-label="Previous industry"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 md:w-6 md:h-6 transform group-hover:-translate-x-0.5 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
+          <ChevronLeft />
+        </Button>
 
-        <button
+        <Button
+          variant="glassCircle"
           onClick={handleNext}
-          className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-brand-white/10 bg-brand-white/5 backdrop-blur-sm flex items-center justify-center text-brand-white/50 hover:text-brand-white hover:border-brand-white/30 hover:bg-brand-white/10 transition-all duration-300 group"
           aria-label="Next industry"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-5 h-5 md:w-6 md:h-6 transform group-hover:translate-x-0.5 transition-transform"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+          <ChevronRight />
+        </Button>
       </div>
 
       {/* Dots Indicator */}

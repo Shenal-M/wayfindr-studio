@@ -1,23 +1,18 @@
 "use client";
 
-import React, { useRef } from "react";
-import { gsap, useGSAP, ScrollTrigger } from "../lib/gsap";
+import React, { useRef, useState } from "react";
+import { gsap, useGSAP } from "../lib/gsap";
 import type { Brand } from "../types";
 
 type Props = {
   brands: Brand[];
   /**
-   * Scroll speed in pixels per second. Specified as a rate rather than a
-   * duration so the strip moves at the same visual speed on mobile, where the
-   * logos are smaller and the track is much shorter.
+   * Travel rate in pixels per second, constant for the life of the strip.
+   * Specified as a rate rather than a duration so the logos move at the same
+   * visual speed on mobile, where they're smaller and the track much shorter.
    */
   speed?: number;
 };
-
-/** How hard scrolling pushes the strip. Higher = less sensitive. */
-const VELOCITY_DAMPING = 400;
-/** Ceiling on the speed multiplier, so a fast flick can't blur the logos. */
-const MAX_BOOST = 4;
 
 // Logos are sized by height, which quietly penalises tall or stacked marks: a
 // wide wordmark spends the whole height budget on one line of letters, while a
@@ -30,6 +25,18 @@ const TALL_RATIO = 1.2;
 const WIDE_RATIO = 4;
 /** Most a stacked mark may exceed the base height. */
 const MAX_TALL_FACTOR = 1.7;
+
+/** Two repeats is the minimum a seamless loop can be built from. */
+const MIN_COPIES = 2;
+/**
+ * Ceiling on total logo elements along the track. Before the images load they
+ * measure at zero width, so the strip briefly looks narrow enough to "need" a
+ * lot of repeats; this bounds what that mistake can cost until the real widths
+ * arrive. Expressed as a total rather than a repeat count so it scales: a
+ * one-logo strip is allowed the many repeats it genuinely needs to span a wide
+ * viewport, while a thirty-logo strip is held to two.
+ */
+const MAX_ITEMS = 60;
 
 /** Give a logo a height that suits its shape, once its real size is known. */
 const fitToAspect = (img: HTMLImageElement) => {
@@ -50,9 +57,13 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // The track renders this twice; the loop travels the width of exactly one
-  // copy, so index `half.length` is where the duplicate begins.
-  const half = [...brands, ...brands];
+  // How many times the brand list is repeated along the track. The loop travels
+  // exactly one repeat, so at the far end of the loop the remaining repeats have
+  // to still cover the viewport or a gap opens at the seam. That's a function of
+  // the measured strip width, so it's settled in build() rather than guessed
+  // here — the previous code hardcoded four copies, which is insurance a wide
+  // list doesn't need and a short one may not have enough of.
+  const [copies, setCopies] = useState(MIN_COPIES);
 
   useGSAP(
     () => {
@@ -66,11 +77,6 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
       // the loop simply never starts and the logos sit still.
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         let loop: gsap.core.Tween | null = null;
-        let hovered = false;
-        // Reassigned by build(), because quickTo binds to a specific tween and
-        // build() replaces the tween. Declared with let so the handlers below
-        // always call through to the current one rather than a dead instance.
-        let setSpeed: (value: number) => void = () => {};
 
         const build = () => {
           // Keep the playhead across rebuilds so a resize doesn't visibly
@@ -78,8 +84,8 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
           const progress = loop?.progress() ?? 0;
           loop?.kill();
 
-          // Measure to the first item of the duplicate half; travelling
-          // exactly that far lands on a frame identical to the start.
+          // Measure to the first item of the second repeat; travelling exactly
+          // that far lands on a frame identical to the start.
           //
           // Deliberately not xPercent:-50 — that resolves against offsetWidth,
           // which isn't the content width here (Tailwind's preflight puts
@@ -89,13 +95,36 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
           // whole pixels and left the loop half a pixel out. Differencing two
           // children cancels the track's own translation.
           const first = track.children[0] as HTMLElement | undefined;
-          const duplicate = track.children[half.length] as HTMLElement | undefined;
-          if (!first || !duplicate) return;
+          const duplicate = track.children[brands.length] as HTMLElement | undefined;
+          if (!first || !duplicate) {
+            loop = null;
+            return;
+          }
 
           const distance =
             duplicate.getBoundingClientRect().left -
             first.getBoundingClientRect().left;
-          if (distance <= 0) return;
+          if (distance <= 0) {
+            // Leave loop null rather than pointing at the tween just killed, or
+            // the next rebuild reads a dead tween's progress as its start point.
+            loop = null;
+            return;
+          }
+
+          // After travelling one repeat the strip has `copies - 1` repeats left
+          // to its right; that has to span the viewport or the seam shows
+          // through as empty space. Re-rendering with more repeats re-runs this
+          // effect, which measures again and converges.
+          const needed = gsap.utils.clamp(
+            MIN_COPIES,
+            Math.max(MIN_COPIES, Math.floor(MAX_ITEMS / brands.length)),
+            Math.ceil(wrapper.clientWidth / distance) + 1
+          );
+          if (needed !== copies) {
+            loop = null;
+            setCopies(needed);
+            return;
+          }
 
           loop = gsap
             .fromTo(
@@ -109,14 +138,6 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
               }
             )
             .progress(progress);
-
-          // Rebind to the tween that now exists, and carry over the state the
-          // old one was holding (a rebuild shouldn't resume a hovered strip).
-          loop.timeScale(hovered ? 0 : 1);
-          setSpeed = gsap.quickTo(loop, "timeScale", {
-            duration: 0.5,
-            ease: "power3.out",
-          });
         };
 
         build();
@@ -128,58 +149,23 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
         const ro = new ResizeObserver(() => rebuild.restart(true));
         ro.observe(track);
 
-        // Couple the strip to scroll: it accelerates with scroll velocity,
-        // then coasts back to its idle pace. Speed responds to how fast you
-        // scroll but never to which way — letting direction follow the scroll
-        // reads as the strip glitching backwards, especially with
-        // ScrollSmoother, whose inertia keeps feeding velocity after the
-        // gesture ends.
-        // Note there's no skew here on purpose — it's the fashionable version
-        // of this effect, but these are client logos and distorting them is a
-        // brand problem, not a style choice.
-        const coast = gsap
-          .delayedCall(0.35, () => setSpeed(hovered ? 0 : 1))
-          .pause();
-
-        const st = ScrollTrigger.create({
-          trigger: wrapper,
-          start: "top bottom",
-          end: "bottom top",
-          onUpdate: (self) => {
-            if (hovered) return;
-            // Magnitude only, and floored at 1, so the strip can speed up but
-            // never stall or run in reverse.
-            const boost = Math.abs(self.getVelocity()) / VELOCITY_DAMPING;
-            setSpeed(gsap.utils.clamp(1, MAX_BOOST, 1 + boost));
-            coast.restart(true);
-          },
-        });
-
-        const slow = () => {
-          hovered = true;
-          setSpeed(0);
-        };
-        const restore = () => {
-          hovered = false;
-          setSpeed(1);
-        };
-
-        wrapper.addEventListener("mouseenter", slow);
-        wrapper.addEventListener("mouseleave", restore);
+        // The strip runs at one constant rate and nothing modulates it: no
+        // scroll-velocity boost, no pause on hover. Both are deliberate
+        // removals, not omissions. Either one means the tween's timeScale is
+        // being written from outside, which is what made the strip appear to
+        // surge or stall for reasons the reader can't connect to anything —
+        // ScrollSmoother's inertia in particular keeps feeding velocity after
+        // the gesture has ended. A logo strip reads better as steady furniture.
 
         return () => {
-          st.kill();
-          coast.kill();
           ro.disconnect();
           rebuild.kill();
-          wrapper.removeEventListener("mouseenter", slow);
-          wrapper.removeEventListener("mouseleave", restore);
         };
       });
 
       return () => mm.revert();
     },
-    { dependencies: [speed, half.length], revertOnUpdate: true }
+    { dependencies: [speed, brands.length, copies], revertOnUpdate: true }
   );
 
   const renderLogo = (brand: Brand, key: string, ariaHidden?: boolean) => (
@@ -209,9 +195,9 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
   );
 
   return (
-    // Hover is bound to this stationary wrapper, not the track: the track is
-    // wider than the viewport and slides, so pointer events on it are
-    // unreliable.
+    // The ref is on this stationary wrapper rather than the track because
+    // build() needs the visible width to work out how many repeats the strip
+    // needs; the track is wider than the viewport and slides.
     <div className="overflow-hidden" ref={wrapperRef}>
       {/* w-max is load-bearing: without it this flex container is block-level
           and takes the wrapper's width, so the children would be measured
@@ -220,9 +206,15 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
         className="flex w-max items-center [--logo-h:2rem] md:[--logo-h:3rem]"
         ref={trackRef}
       >
-        {half.map((brand, i) => renderLogo(brand, `${brand.id}-${i}`))}
-        {/* Duplicate half — the seamless loop depends on this matching exactly. */}
-        {half.map((brand, i) => renderLogo(brand, `${brand.id}-${i}-dup`, true))}
+        {/* Every repeat must match exactly — build() measures the loop distance
+            as the gap between child 0 and child brands.length, so the repeats
+            being identical is what makes the wrap frame-identical to the start.
+            Only the first repeat is exposed to assistive tech. */}
+        {Array.from({ length: copies }, (_, copy) =>
+          brands.map((brand, i) =>
+            renderLogo(brand, `${brand.id}-${copy}-${i}`, copy > 0)
+          )
+        )}
       </div>
     </div>
   );

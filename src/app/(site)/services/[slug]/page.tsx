@@ -8,7 +8,7 @@ import { client } from "../../../../sanity/lib/client";
 import { SERVICE_BY_SLUG_QUERY, PROJECTS_BY_SERVICE_TAG_QUERY, SERVICES_QUERY } from "../../../../sanity/lib/queries";
 import type { Service, Project } from "../../../../types";
 import { AGENCY_PAGE_FALLBACK, PROJECTS as FALLBACK_PROJECTS } from "../../../../constants";
-import ViewAllButton from "../../../../components/ViewAllButton";
+import Button from "../../../../components/Button";
 
 export const revalidate = 60;
 
@@ -300,7 +300,11 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
               </Link>
             ))}
           </div>
-          <ViewAllButton href="/work" text="See more work" align="left" />
+          {/* Was <ViewAllButton align="left" />, whose only job was this wrapper
+              plus a button identical to the shared one. */}
+          <div className="flex justify-start mt-12">
+            <Button href="/work">See more work</Button>
+          </div>
         </section>
       )}
     </div>

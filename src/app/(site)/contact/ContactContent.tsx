@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import CopyBubble from "../../../components/CopyBubble";
+import { useCopyToClipboard } from "../../../components/useCopyToClipboard";
 import type { ContactInfo, FAQItem } from "../../../types";
 
 const AccordionItem = ({ question, answer }: FAQItem) => {
@@ -49,34 +51,11 @@ type Props = {
 };
 
 const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
-  const [copied, setCopied] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [showBubble, setShowBubble] = useState(false);
-
-  const handleEmailClick = async () => {
-    try {
-      await navigator.clipboard.writeText(contactInfo.email);
-      setCopied(true);
-      setShowBubble(true);
-      setIsHovered(false); // Reset hover state
-      
-      // On mobile/touch devices, show for 1200ms, on desktop keep it for 2s
-      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      const timeout = isMobile ? 1200 : 2000;
-      
-      setTimeout(() => {
-        // Start fading out the bubble
-        setShowBubble(false);
-        
-        // Wait for fade animation to complete (300ms) before changing text
-        setTimeout(() => {
-          setCopied(false);
-        }, 300);
-      }, timeout);
-    } catch (err) {
-      console.error("Failed to copy email:", err);
-    }
-  };
+  // This component's own copy-to-clipboard logic was the better of the two on
+  // the site, so it became the shared hook rather than being replaced by one.
+  const { copied, bubbleVisible, copy, hoverHandlers } = useCopyToClipboard(
+    contactInfo.email
+  );
 
   return (
     <div className="w-full bg-brand-white min-h-screen">
@@ -111,52 +90,20 @@ const ContactContent: React.FC<Props> = ({ faqs, contactInfo }) => {
                   New Business
                 </span>
                 <button
-                  onClick={handleEmailClick}
-                  onMouseEnter={() => !copied && setIsHovered(true)}
-                  onMouseLeave={() => !copied && setIsHovered(false)}
+                  onClick={copy}
+                  {...hoverHandlers}
                   className="group text-left flex items-center gap-3 cursor-pointer"
                 >
                   {/* Email text with underline animation */}
-                  <div className="relative">
+                  <span className="relative">
                     <span className="text-xl md:text-xl font-semibold text-brand-black transition-all duration-300 group-hover:text-brand-blue">
                       {contactInfo.email}
                     </span>
                     {/* Always visible dashed underline that becomes solid on hover */}
                     <span className="absolute bottom-0 left-0 right-0 h-[1px] border-b-2 border-dashed border-brand-graphite/30 transition-all duration-300 group-hover:border-brand-blue group-hover:border-solid group-hover:h-[2px]" />
-                  </div>
-                  
-                  {/* Container for absolute positioning to prevent layout shift */}
-                  <div className="relative w-0">
-                    {/* Copy bubble on the right */}
-                    <div 
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 px-4 py-2 text-sm font-medium whitespace-nowrap rounded-full bg-brand-black text-brand-white transform transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${
-                        (showBubble || isHovered) 
-                          ? 'opacity-100 translate-x-0' 
-                          : 'opacity-0 -translate-x-2 pointer-events-none'
-                      }`}
-                    >
-                      <div className="relative inline-block -translate-y-0.5">
-                        <span 
-                          className={`block ${
-                            copied 
-                              ? 'opacity-0 -translate-y-full absolute inset-0 hidden' 
-                              : 'opacity-100 translate-y-0 relative'
-                          }`}
-                        >
-                          Click to copy
-                        </span>
-                        <span 
-                          className={`block transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                            copied 
-                              ? 'opacity-100 translate-y-0 relative' 
-                              : 'opacity-0 translate-y-full absolute inset-0'
-                          }`}
-                        >
-                          Done
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  </span>
+
+                  <CopyBubble tone="onLight" visible={bubbleVisible} copied={copied} />
                 </button>
               </div>
               <div>

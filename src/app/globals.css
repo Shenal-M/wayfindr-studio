@@ -43,9 +43,18 @@ body {
    GSAP runs in useLayoutEffect, which fires after the browser has painted the
    SSR'd HTML — so animating with gsap.from() would flash the final state first.
    Holding the start state in CSS instead means the element is never painted in
-   its end position. A <noscript> override in the root layout restores these
-   to visible when scripting is off, so the content is never stranded. */
-.reveal-init {
+   its end position.
+
+   Everything here is gated on html.anim, a class added by a blocking inline
+   script in the root layout. That script is also what un-gates it again if the
+   client bundle never reports in, which is the failure this guards: with the
+   rules unconditional, anything that stops GSAP from running — a hydration
+   error, a chunk that 404s, a stale service worker — leaves the hero and every
+   body section permanently invisible with no way back. <noscript> doesn't cover
+   that case, because scripting is enabled; it's the bundle that died.
+
+   The class is added before first paint, so gating costs nothing visually. */
+.anim .reveal-init {
   opacity: 0;
   transform: translateY(40px);
 }
@@ -55,17 +64,20 @@ body {
    tween's yPercent would stack on top of it, leaving the line permanently
    offset by a line height. Hiding it instead lets GSAP own the transform
    outright; the tween restores visibility via autoAlpha. */
-.hero-line {
+.anim .hero-line {
   visibility: hidden;
 }
 
+/* GSAP does load in this case — it just declines to build the animations — so
+   the start states have to be neutralised in CSS rather than left for a tween
+   that will never run. */
 @media (prefers-reduced-motion: reduce) {
-  .reveal-init {
+  .anim .reveal-init {
     opacity: 1;
     transform: none;
   }
 
-  .hero-line {
+  .anim .hero-line {
     visibility: visible;
   }
 }

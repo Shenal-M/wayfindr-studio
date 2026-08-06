@@ -5,33 +5,68 @@ import SmoothScrollProvider from "../../components/SmoothScrollProvider";
 import { client } from "../../sanity/lib/client";
 import { SITE_SETTINGS_QUERY } from "../../sanity/lib/queries";
 import type { SiteSettings } from "../../types";
-import { SOCIAL_LINKS, FOOTER_ABOUT_TEXT, FOOTER_LOGO_SVG } from "../../constants";
+import { SOCIAL_LINKS, FOOTER_ABOUT_TEXT } from "../../constants";
 
 /**
- * Read an SVG's intrinsic size so the footer logo can reserve its space before
- * it downloads. It's stored as a Sanity *file* asset, so unlike an image asset
- * the URL carries no dimensions — without this the <img> lays out at zero
- * height and then snaps to its real height on load, growing the page by ~300px
- * underneath the reader. Only two numbers are parsed out; the markup is never
- * inlined.
+ * Strip anything executable from third-party SVG markup before it goes anywhere
+ * near dangerouslySetInnerHTML. The asset is first-party — it comes from the
+ * studio's own Sanity dataset — but "our CMS" is not a security boundary, and an
+ * SVG is a document format that can carry script.
+ *
+ * Note that <style> is deliberately kept: SVGs exported from design tools carry
+ * their fills in a style block, so removing it would render the logo invisible.
+ * The caveat is that a <style> inside inline SVG applies to the whole document,
+ * so its selectors are global. The current asset uses Illustrator's generated
+ * `.cls-N` names, which collide with nothing here — worth re-checking if a logo
+ * with hand-written class names ever replaces it.
  */
-async function readSvgSize(url?: string) {
+function sanitizeSvg(svg: string) {
+  return (
+    svg
+      // Neither is legal inside HTML, and the prolog stops the parser dead.
+      .replace(/<\?xml[\s\S]*?\?>/gi, "")
+      .replace(/<!DOCTYPE[\s\S]*?>/gi, "")
+      .replace(/<script[\s\S]*?<\/script\s*>/gi, "")
+      // foreignObject re-enters HTML parsing, so it's a way back to script.
+      .replace(/<foreignObject[\s\S]*?<\/foreignObject\s*>/gi, "")
+      .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      .replace(
+        /\s(?:xlink:)?href\s*=\s*("|')\s*javascript:[^"']*\1/gi,
+        ""
+      )
+      .trim()
+  );
+}
+
+/**
+ * Fetch the footer wordmark and return its markup for inlining.
+ *
+ * This used to parse out only the viewBox numbers and hand them to an <img> as
+ * width/height, to reserve the right height before the file downloaded. Inlining
+ * is better on three counts:
+ *
+ *  1. It stops the wordmark jittering. Painted as an image it was subject to
+ *     device-pixel snapping while the text beside it was positioned with
+ *     sub-pixel precision, so inside ScrollSmoother's transformed content the two
+ *     stepped against each other — clearly in Firefox, subtly in Chrome. Inline
+ *     SVG is vector geometry, painted like the text is.
+ *  2. No layout shift at all, rather than a reserved box that gets filled later.
+ *     The geometry is in the HTML, so there is nothing to arrive.
+ *  3. One fewer network request, on every page — the footer is in the shared
+ *     layout. The asset is ~2KB, comfortably less than the request it replaces.
+ */
+async function loadFooterLogo(url?: string) {
   if (!url?.startsWith("http")) return null;
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) return null;
-    const svg = await res.text();
-
-    const viewBox = svg.match(
-      /viewBox\s*=\s*["']\s*[\d.+-]+[\s,]+[\d.+-]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i
-    );
-    if (viewBox) return { width: +viewBox[1], height: +viewBox[2] };
-
-    const width = svg.match(/\bwidth\s*=\s*["']([\d.]+)/i);
-    const height = svg.match(/\bheight\s*=\s*["']([\d.]+)/i);
-    if (width && height) return { width: +width[1], height: +height[1] };
+    const markup = sanitizeSvg(await res.text());
+    // Anything that isn't a bare <svg> root after sanitising is not something we
+    // should be injecting; fall through to the text wordmark instead.
+    if (!markup.startsWith("<svg")) return null;
+    return markup;
   } catch {
-    // Fall through — the footer just behaves as it did before.
+    // Fall through — FooterAlt renders its text wordmark.
   }
   return null;
 }
@@ -47,15 +82,17 @@ export default async function SiteLayout({
     : SOCIAL_LINKS;
   const email = siteSettings?.contactInfo?.email || "hello@wayfindr.com";
   const aboutText = siteSettings?.footerAboutText || FOOTER_ABOUT_TEXT;
-  const logoSvg = siteSettings?.footerLogoSvg || FOOTER_LOGO_SVG;
-  const logoSize = await readSvgSize(siteSettings?.footerLogoSvg);
+  const logoMarkup = await loadFooterLogo(siteSettings?.footerLogoSvg);
 
   return (
     <>
       {/* Fixed-position — must stay outside the smooth wrapper's transform. */}
       <Navigation />
       <SmoothScrollProvider>
-        <div className="flex flex-col min-h-screen">
+        {/* svh rather than screen (vh), to match the hero. vh is the largest
+            viewport height, so on mobile it reserves more than is on screen and
+            adds scroll that isn't wanted; svh is the stable smallest one. */}
+        <div className="flex flex-col min-h-svh">
           {/* Must match the fixed header in Navigation.tsx: its h-16 plus the
               1px border-b, so 65px total. Padding of a plain 4rem left content
               sitting 1px under the border. */}
@@ -64,9 +101,7 @@ export default async function SiteLayout({
             socialLinks={socialLinks}
             email={email}
             aboutText={aboutText}
-            logoSvg={logoSvg}
-            logoWidth={logoSize?.width}
-            logoHeight={logoSize?.height}
+            logoMarkup={logoMarkup}
           />
         </div>
       </SmoothScrollProvider>
