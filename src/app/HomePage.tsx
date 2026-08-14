@@ -2,10 +2,25 @@
 
 import React, { useRef } from "react";
 import Link from "next/link";
-import { gsap, useGSAP, ScrollTrigger } from "../lib/gsap";
+// No ScrollTrigger import: the reveals moved to ScrollRevealProvider, and what's
+// left here reaches the plugin through the `scrollTrigger` config object on a
+// tween rather than by calling it directly.
+import { gsap, useGSAP } from "../lib/gsap";
 import Button from "../components/Button";
 import Marquee from "../components/Marquee";
+import {
+  FULL_BLEED,
+  HALF_COLUMN,
+  responsiveImage,
+} from "../sanity/lib/imageUrl";
 import type { Brand, Project, Testimonial } from "../types";
+
+/**
+ * How far a parallax image travels from its resting position, as a percentage of
+ * its own height, in each direction. Must stay below 8.3 — see the parallax block
+ * below for the geometry.
+ */
+const PARALLAX_PCT = 6;
 
 type Props = {
   heroLine1?: string | null;
@@ -82,24 +97,52 @@ const HomePage: React.FC<Props> = ({
           },
         });
 
-        // batch groups whatever crossed the line together, so the offset
-        // second card staggers with its row rather than on its own schedule.
-        ScrollTrigger.batch(
-          gsap.utils.toArray<HTMLElement>("[data-reveal]", root),
-          {
-            start: "top 85%",
-            once: true,
-            onEnter: (elements) =>
-              gsap.to(elements, {
-                opacity: 1,
-                y: 0,
-                duration: 0.9,
-                ease: "power3.out",
-                stagger: 0.12,
-                overwrite: true,
-              }),
-          }
-        );
+        // The [data-reveal] batch that used to live here is now
+        // ScrollRevealProvider, in the site layout — every page needed it, and one
+        // implementation for all of them beats five copies drifting apart. The
+        // markup here is unchanged: `data-reveal` plus `reveal-init` still opts an
+        // element in.
+
+        // Parallax. This used to be ScrollSmoother's `data-speed`, which is gone
+        // along with ScrollSmoother — the effect is now an ordinary scrubbed
+        // ScrollTrigger, which is better suited to it in two ways: it works on
+        // touch (data-speed didn't, because it rode the smoother's own rAF loop
+        // and touch devices scrolled natively), and each image's range is its own
+        // rather than a global speed multiplier.
+        //
+        // yPercent, not y: it resolves against the element's own height, so the
+        // travel stays proportional at every breakpoint with nothing to
+        // recompute on resize.
+        //
+        // The images are h-[120%] at -top-[10%], so there's 10% of the
+        // container's height of cover to spare at each edge — 8.3% of the image's
+        // own height. PARALLAX_PCT stays under that, or the image would pull away
+        // from its frame at one end of the scroll and expose the background.
+        gsap.utils.toArray<HTMLElement>("[data-parallax]", root).forEach((el) => {
+          const frame = el.parentElement;
+          if (!frame) return;
+
+          gsap.fromTo(
+            el,
+            { yPercent: -PARALLAX_PCT },
+            {
+              yPercent: PARALLAX_PCT,
+              // ease:"none" is required, not stylistic — anything else breaks the
+              // 1:1 mapping between scroll position and image position, and the
+              // image appears to drift independently of the scroll.
+              ease: "none",
+              scrollTrigger: {
+                // The frame, not the image: the image is the thing being moved,
+                // and a trigger measures the element it's given, so triggering
+                // off it would feed its own displacement back into the range.
+                trigger: frame,
+                start: "top bottom",
+                end: "bottom top",
+                scrub: true,
+              },
+            }
+          );
+        });
       });
 
       return () => mm.revert();
@@ -118,11 +161,11 @@ const HomePage: React.FC<Props> = ({
 
           svh, not dvh. dvh retracks as the mobile URL bar collapses, so it
           changes mid-scroll — which resized the hero AND (below) the headline's
-          font size while a gesture was in flight, moving every measurement
-          ScrollSmoother and its triggers were part-way through using. svh is the
-          smallest viewport height, the URL-bar-shown case, and it never changes
-          while scrolling. When the bar retracts you get a little of the next
-          section showing under the cue, which is fine.
+          font size while a gesture was in flight, moving every measurement the
+          page's ScrollTriggers were part-way through using and firing a refresh
+          on each step. svh is the smallest viewport height, the URL-bar-shown
+          case, and it never changes while scrolling. When the bar retracts you get
+          a little of the next section showing under the cue, which is fine.
 
           And the cue is an ordinary flex item, not `absolute bottom-8`. That
           matters because min-h is a *minimum*: if the type ever outgrows it the
@@ -169,7 +212,14 @@ const HomePage: React.FC<Props> = ({
               by measuring from the section's padding edge instead. */}
           <div
             ref={scrollHintRef}
-            className="self-end text-sm font-bold uppercase tracking-widest text-brand-graphite animate-bounce"
+            // animate-bounce is an infinite CSS animation, which is the single
+            // clearest thing prefers-reduced-motion asks us not to run. It's safe
+            // to switch off outright — unlike the fadeInUp entrances, nothing here
+            // depends on the animation to become visible, so animate-none leaves
+            // the cue sitting still and fully legible. Its opacity is still
+            // scrubbed by the ScrollTrigger above, which is a separate property on
+            // a separate layer and doesn't conflict.
+            className="self-end text-sm font-bold uppercase tracking-widest text-brand-graphite animate-bounce motion-reduce:animate-none"
           >
             Scroll
           </div>
@@ -186,20 +236,25 @@ const HomePage: React.FC<Props> = ({
             data-reveal
           >
             <div className="relative overflow-hidden w-full aspect-[4/3] md:aspect-auto md:min-h-[94vh] bg-brand-offwhite">
-                {/* transition-[scale,filter], never transition-all. This image
-                    carries data-speed, so ScrollSmoother rewrites its transform
-                    every frame; `all` would ease each of those writes over
-                    500ms and the parallax would visibly chase the scroll
-                    instead of tracking it. Naming the properties keeps the
-                    hover on scale/filter — which Tailwind v4 emits as the
-                    standalone `scale` property, so it composes with GSAP's
-                    transform rather than fighting it — and leaves transform
-                    alone. Same separation the grid images below make with their
-                    tint layer. */}
+                {/* transition-[scale,filter], never transition-all. The parallax
+                    ScrollTrigger rewrites this image's transform every frame;
+                    `all` would ease each of those writes over 500ms and the
+                    parallax would visibly chase the scroll instead of tracking
+                    it. Naming the properties keeps the hover on scale/filter —
+                    which Tailwind v4 emits as the standalone `scale` property, so
+                    it composes with GSAP's transform rather than fighting it —
+                    and leaves transform alone. Same separation the grid images
+                    below make with their tint layer. */}
+                {/* Width only, never a height/crop: the CDN would centre-crop
+                    to whatever ratio we named, and this element is 120% of a
+                    box whose own ratio changes at md, so object-cover is
+                    already framing it. Pre-cropping would shift that framing
+                    for no bytes saved — the resolution cap is the whole win. */}
                 <img
-                  src={projects[0].thumbnail}
+                  {...responsiveImage(projects[0].thumbnail, FULL_BLEED)}
                   alt={projects[0].title}
-                  data-speed="0.97"
+                  data-parallax
+                  loading="lazy"
                   className="absolute left-0 w-full h-[120%] -top-[10%] object-cover transition-[scale,filter] duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
                 />
               </div>
@@ -237,15 +292,16 @@ const HomePage: React.FC<Props> = ({
               >
                 <div className="relative overflow-hidden mb-3 aspect-[4/3] bg-brand-offwhite">
                   <img
-                    src={project.thumbnail}
+                    {...responsiveImage(project.thumbnail, HALF_COLUMN)}
                     alt={project.title}
-                    data-speed="0.97"
+                    data-parallax
+                    loading="lazy"
                     className="absolute left-0 w-full h-[120%] -top-[10%] object-cover"
                   />
                   {/* Hover tint as its own layer rather than a filter on the
-                      image. ScrollSmoother rewrites the image's transform every
-                      frame for the parallax, so anything transitioned on the
-                      image itself ends up easing each of those frames and feels
+                      image. The parallax ScrollTrigger rewrites the image's
+                      transform every frame, so anything transitioned on the image
+                      itself ends up easing each of those frames and feels
                       sluggish; animating opacity here keeps the two apart. */}
                   <div className="absolute inset-0 bg-brand-black opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-20 pointer-events-none" />
                 </div>

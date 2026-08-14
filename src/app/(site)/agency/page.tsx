@@ -69,6 +69,14 @@ const AgencyPageComponent = async () => {
       <div className="border-t border-brand-border" />
 
       {/* Services Section */}
+      {/* Deliberately NOT revealed, and both halves have their own reason.
+          The left column's heading is `sticky top-32`: a transform on it, or on
+          any ancestor, makes that element a containing block and changes what the
+          sticky offset resolves against — so a reveal here would either fight the
+          stickiness or cancel it. The right column is CapabilitiesList, which runs
+          its own per-row entrance; wrapping that in a second reveal would mean two
+          animations describing the same event, and the outer one's transform would
+          land on the ancestor of every row the inner one measures. */}
       {servicesData && servicesData.length > 0 && (
         <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16">
@@ -87,12 +95,19 @@ const AgencyPageComponent = async () => {
       {/* Industries Section */}
       {data.industries && data.industries.length > 0 && (
         <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto bg-brand-black">
-          <div className="mb-12 md:mb-16">
+          <div className="mb-12 md:mb-16 reveal-init" data-reveal>
             <h2 className="font-sans text-sm font-bold uppercase tracking-widest text-brand-white">
               {data.industriesTitle || "Industries We Work With"}
             </h2>
           </div>
-          <IndustriesCarousel industries={data.industries} />
+          {/* Safe to reveal now. This was excluded while the carousel animated its
+              own height with Motion's `layout`, which measures viewport rects and
+              so can't be measured from inside a moving ancestor. The stage is a
+              fixed height today and nothing in there measures anything, so the
+              reveal's transform and the slides' are simply composed. */}
+          <div className="reveal-init" data-reveal>
+            <IndustriesCarousel industries={data.industries} />
+          </div>
         </section>
       )}
 
@@ -101,7 +116,7 @@ const AgencyPageComponent = async () => {
         <section className="py-24 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto border-t border-brand-border">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
             {data.stats.map((stat, index) => (
-              <div key={index} className="text-center">
+              <div key={index} className="text-center reveal-init" data-reveal>
                 <div className="font-sans font-bold text-6xl md:text-8xl text-brand-blue tracking-tighter mb-4">
                   {stat.number}
                 </div>
@@ -116,7 +131,7 @@ const AgencyPageComponent = async () => {
 
       {/* Philosophy Section */}
       <section className="py-32 md:py-40 px-6 md:px-12 bg-brand-offwhite">
-        <div className="max-w-5xl mx-auto text-center">
+        <div className="max-w-5xl mx-auto text-center reveal-init" data-reveal>
           <blockquote className="font-serif text-4xl md:text-6xl leading-tight text-brand-black">
             "{data.philosophyQuote}"
           </blockquote>

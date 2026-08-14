@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { gsap, useGSAP } from "../lib/gsap";
+import { LOGO_WIDTH, imageUrl } from "../sanity/lib/imageUrl";
 import type { Brand } from "../types";
 
 type Props = {
@@ -154,8 +155,16 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
         // removals, not omissions. Either one means the tween's timeScale is
         // being written from outside, which is what made the strip appear to
         // surge or stall for reasons the reader can't connect to anything —
-        // ScrollSmoother's inertia in particular keeps feeding velocity after
-        // the gesture has ended. A logo strip reads better as steady furniture.
+        // smooth scrolling in particular keeps feeding velocity after the gesture
+        // has ended, so a velocity-linked strip never settles. A logo strip reads
+        // better as steady furniture.
+        //
+        // One consequence of the Lenis integration to be aware of here: the
+        // provider sets gsap.ticker.lagSmoothing(0), which is global. This loop
+        // will therefore jump ahead rather than resume in place after the tab has
+        // been backgrounded, instead of GSAP clamping the delta. That's accepted —
+        // the alternative is feeding Lenis a truncated time step, which makes the
+        // whole page lurch on refocus. See SmoothScrollProvider.
 
         return () => {
           ro.disconnect();
@@ -176,7 +185,14 @@ const Marquee: React.FC<Props> = ({ brands, speed = 70 }) => {
     >
       {brand.logoUrl ? (
         <img
-          src={brand.logoUrl}
+          // A single capped width rather than a srcSet, and no loading="lazy",
+          // both because of the measuring above and in build(). A srcSet lets
+          // the browser swap candidates on a viewport change, and lazy logos
+          // measure at zero width while they're off to the right — either one
+          // feeds the loop a track width that's about to change, and it
+          // rebuilds until the widths settle. One eager candidate is cheap
+          // here anyway: these are ~400px marks, not photographs.
+          src={imageUrl(brand.logoUrl, LOGO_WIDTH)}
           alt={brand.name}
           // onLoad alone misses images already in cache, whose load event has
           // fired before React attaches the handler — the ref catches those.

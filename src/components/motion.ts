@@ -1,20 +1,30 @@
 /**
  * Shared motion values for the copy affordance.
  *
- * Deliberately only covers the copy bubble and its label. Button hovers are plain
- * CSS transitions — a symmetric two-state change is what those are for, and
- * routing one through GSAP made the exit worse, not better (see Button). What's
- * left here is the animation that genuinely needs JS: a label whose width has to
- * be measured before it can be animated, and a dismissal that has to stay in step
- * with a React timer.
- *
  * Keeping the numbers in one place is what stops them drifting — the bubble and
  * the hook that dismisses it previously disagreed by 200ms, so the label flipped
  * back while the bubble was still fading out.
+ *
+ * The copy bubble and its label are driven by Motion, not GSAP: they animate in
+ * response to React state (hovered, copied) and the label's container has to
+ * resize to fit whichever text is showing, which is a layout animation. See
+ * .claude/skills/animation-stack for why that assignment is what it is.
+ *
+ * Button hovers are deliberately not here. A symmetric two-state hover is what
+ * CSS transitions are for, and routing one through a JS library made the exit
+ * worse, not better (see Button).
  */
 
-/** Fast off the mark, soft landing. Reads as snappy without being abrupt. */
-export const EASE = "power3.out";
+/**
+ * Fast off the mark, soft landing. Reads as snappy without being abrupt.
+ *
+ * Two spellings of the same curve, because the two libraries take different
+ * types and this repo uses both. The bezier is the standard cubic ease-out, which
+ * is what GSAP's `power3.out` computes — so anything animating alongside a GSAP
+ * tween stays in step with it.
+ */
+export const EASE_GSAP = "power3.out";
+export const EASE: [number, number, number, number] = [0.33, 1, 0.68, 1];
 
 /** The copy bubble arriving and leaving. */
 export const DUR_BUBBLE = 0.35;

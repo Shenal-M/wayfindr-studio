@@ -3,11 +3,48 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import NavigatorIcon from "./NavigatorIcon";
+
+/**
+ * The mobile menu overlay is a Motion component because it enters and leaves the
+ * React tree, and deferring an unmount until an exit animation has finished is
+ * the one thing no other layer in this stack can do.
+ *
+ * It used to be permanently mounted behind `opacity-0 pointer-events-none`,
+ * because a plain CSS transition can't animate an element that's already gone.
+ * That was an accessibility bug rather than a stylistic choice: pointer-events
+ * stops the mouse but not the keyboard, so three off-screen links stayed in the
+ * tab order on every page, and screen readers read out a menu that wasn't open.
+ * Unmounting it is the fix.
+ *
+ * The stagger is `staggerChildren` rather than a per-item transitionDelay
+ * computed from the index. The hand-rolled version only ran forwards — on close,
+ * every item left at once, because the delays would have had to be reversed by
+ * hand to cascade the other way.
+ */
+const OVERLAY_VARIANTS = {
+  closed: { opacity: 0 },
+  open: { opacity: 1 },
+};
+
+const LIST_VARIANTS = {
+  closed: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
+  open: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+};
+
+const ITEM_VARIANTS = {
+  closed: { opacity: 0, y: 8 },
+  open: { opacity: 1, y: 0 },
+};
+
+/** The curve the whole site's larger transitions use. */
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 const Navigation: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const reduce = useReducedMotion();
 
   const closeMenu = () => setIsMenuOpen(false);
 
@@ -67,33 +104,43 @@ const Navigation: React.FC = () => {
         </div>
       </header>
 
-      <div 
-        className={`fixed inset-0 z-40 bg-brand-white flex flex-col items-center justify-center transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          isMenuOpen 
-            ? 'opacity-100 pointer-events-auto' 
-            : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <nav className="flex flex-col items-center gap-8">
-          {navItems.map((item, index) => (
-            <Link
-              key={item.label}
-              href={item.path}
-              className={`text-4xl font-sans font-bold tracking-tight text-brand-black hover:text-brand-blue transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                isMenuOpen 
-                  ? 'opacity-100 translate-y-0' 
-                  : 'opacity-0 translate-y-2'
-              }`}
-              style={{
-                transitionDelay: isMenuOpen ? `${200 + index * 80}ms` : '0ms'
-              }}
-              onClick={closeMenu}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            variants={OVERLAY_VARIANTS}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
+            className="fixed inset-0 z-40 bg-brand-white flex flex-col items-center justify-center"
+          >
+            {/* The list carries no visual animation of its own — it exists to own
+                the stagger and pass `open`/`closed` down to the items, which
+                inherit the variant from their parent rather than being told
+                individually. */}
+            <motion.nav
+              variants={LIST_VARIANTS}
+              className="flex flex-col items-center gap-8"
             >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
+              {navItems.map((item) => (
+                <motion.div
+                  key={item.label}
+                  variants={ITEM_VARIANTS}
+                  transition={{ duration: reduce ? 0 : 0.5, ease: EASE }}
+                >
+                  <Link
+                    href={item.path}
+                    className="text-4xl font-sans font-bold tracking-tight text-brand-black hover:text-brand-blue transition-colors duration-300"
+                    onClick={closeMenu}
+                  >
+                    {item.label}
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

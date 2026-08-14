@@ -53,14 +53,13 @@ const FooterAlt = ({ socialLinks, email, aboutText, logoMarkup }: Props) => {
   const { copied, bubbleVisible, copy, hoverHandlers } = useCopyToClipboard(email);
 
   return (
-    // The shadow is a seam guard, not decoration. ScrollSmoother transforms
-    // #smooth-content, but the browser's scrollHeight is a whole number while
-    // the content's height is fractional — so at maximum scroll the content
-    // can stop a fraction of a pixel short of the viewport bottom, exposing a
-    // hairline of the white body background. Painting the footer's own colour
-    // a few pixels past its box covers that without touching layout or
-    // scroll height.
-    <footer className="bg-brand-black text-brand-white w-full py-20 mt-auto shadow-[0_4px_0_0_var(--color-brand-black)]">
+    // No seam guard needed here any more. This used to carry a 4px shadow of its
+    // own background colour, because ScrollSmoother translated #smooth-content by
+    // a fractional amount while the browser's scrollHeight is a whole number — so
+    // at maximum scroll the content could stop a fraction of a pixel short and
+    // expose a hairline of the white body behind it. Lenis animates real scroll
+    // and applies no transform, so there is no longer a discrepancy to cover.
+    <footer className="bg-brand-black text-brand-white w-full py-20 mt-auto">
       <div className="max-w-[1920px] mx-auto px-6 md:px-12">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-12 pb-12 border-b border-gray-800">
           <h4 className="md:col-span-2 text-xs font-bold uppercase tracking-[0.3em] text-gray-500">
@@ -119,37 +118,33 @@ const FooterAlt = ({ socialLinks, email, aboutText, logoMarkup }: Props) => {
         </div>
       </div>
 
-      {/* This wordmark carries NO compositing hints, and that is the whole
-          point — no will-change, no translateZ(0), no backface-visibility. They
-          were added to stop it shimmering while scrolling, and they are what
-          made it wobble instead.
+      {/* This wordmark carries no compositing hints — no will-change, no
+          translateZ(0), no backface-visibility — and it doesn't need any. It is
+          not animated; the page simply scrolls past it. Promoting a static
+          element to its own layer costs memory and buys nothing.
 
-          ScrollSmoother sets a transform on #smooth-content and animates it
-          every frame, so the browser already composites that subtree as a single
-          layer: its contents are rasterised once and the whole layer is
-          translated. Anything inside gets rasterise-once-and-translate for free.
-
-          Promoting the wordmark separately does not add that — it opts out of
-          it. The compositor snaps each layer's screen position to whole device
-          pixels, so a promoted child advances in 1px steps while the parent
-          layer it sits in glides by fractional amounts. This was the only
-          element on the page with its own layer, which is exactly why it was the
-          only thing that appeared to move. Left in the parent layer it travels
-          with its surroundings, because it is literally part of the same
-          rasterised image.
+          Historical note, because these hints were added twice and reverted
+          twice: under ScrollSmoother the whole page sat inside an animated
+          transform, so a separately-promoted child snapped to whole device pixels
+          while the layer around it glided by fractional amounts, and the wordmark
+          visibly wobbled against its surroundings. Lenis scrolls natively and
+          applies no transform, so neither the original shimmer nor the wobble the
+          hints caused is reachable now. Don't reintroduce them speculatively.
 
           Nothing else here needs styling either: Tailwind's preflight already
           gives img `display:block`, `max-width:100%` and `height:auto`, so the
-          inline copies of those were duplication. The old overflow-hidden
-          wrapper is gone too — a w-full image cannot overflow its parent, and
-          clipping at a fractional edge is its own source of 1px flicker. */}
+          inline copies of those were duplication. */}
       <div className="mb-16 w-full px-6 md:px-12">
         {logoMarkup ? (
-          /* Inline SVG, not an <img>, and that is the point — an image gets its
-             painted rect snapped to whole device pixels while the text beside it
-             is positioned sub-pixel, so inside ScrollSmoother's transformed
-             content the two stepped against each other as you scrolled. Vector
-             geometry is painted the same way text is, so they move together.
+          /* Inline SVG rather than an <img>. The original reason was a rendering
+             one — an image's painted rect gets snapped to whole device pixels
+             while adjacent text is positioned sub-pixel, which made the two step
+             against each other inside ScrollSmoother's transformed content — and
+             that specific problem is gone with ScrollSmoother. The other two
+             reasons stand on their own and are why this stays inline: zero layout
+             shift, because the geometry is already in the HTML rather than
+             arriving over the network, and one fewer request on every page, since
+             the footer is in the shared layout.
 
              The arbitrary child selectors size the SVG rather than an <img>: the
              asset carries a viewBox and no width/height, so width:100% plus

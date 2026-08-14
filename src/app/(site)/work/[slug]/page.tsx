@@ -3,6 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { client } from "../../../../sanity/lib/client";
 import {
+  FULL_BLEED,
+  columnFraction,
+  imageUrl,
+  responsiveImage,
+} from "../../../../sanity/lib/imageUrl";
+import {
   PROJECTS_QUERY,
   PROJECT_BY_SLUG_QUERY,
 } from "../../../../sanity/lib/queries";
@@ -14,9 +20,19 @@ import { ScrollRevealText } from "../../../../components/ScrollRevealText";
 // CONTENT BLOCK COMPONENTS
 // ═══════════════════════════════════════════════════════════════
 
+// Every block below sizes its images with columnFraction(), whose argument is
+// the share of the content column the image is painted into on desktop — 1 for
+// a full-width block, 1/3 for a column of a triple grid. Getting that fraction
+// right is what stops a phone downloading a desktop-width image; `sizes` is
+// doing more work here than `quality` ever could.
 const FullWidthImage = ({ url, caption, altText }: { url: string; caption?: string; altText?: string }) => (
   <div className="w-full my-16 md:my-20">
-    <img src={url} alt={altText || caption || "Project visual"} className="w-full h-auto" />
+    <img
+      {...responsiveImage(url, columnFraction(1))}
+      alt={altText || caption || "Project visual"}
+      loading="lazy"
+      className="w-full h-auto"
+    />
     {caption && (
       <p className="mt-4 text-sm text-brand-graphite font-sans">{caption}</p>
     )}
@@ -28,8 +44,9 @@ const DualGrid = ({ images }: { images: { url: string; caption?: string }[] }) =
     {images.map((img, idx) => (
       <div key={idx}>
         <img
-          src={img.url}
+          {...responsiveImage(img.url, columnFraction(1 / 2))}
           alt={img.caption || `Detail ${idx + 1}`}
+          loading="lazy"
           className="w-full h-auto aspect-square object-cover"
         />
         {img.caption && (
@@ -45,8 +62,9 @@ const TripleGrid = ({ images }: { images: { url: string; caption?: string }[] })
     {images.map((img, idx) => (
       <div key={idx}>
         <img
-          src={img.url}
+          {...responsiveImage(img.url, columnFraction(1 / 3))}
           alt={img.caption || `Detail ${idx + 1}`}
+          loading="lazy"
           className="w-full h-auto aspect-[9/16] object-cover"
         />
       </div>
@@ -60,9 +78,17 @@ const Gallery = ({ images, columns = 3 }: { images: { url: string; caption?: str
     <div className={`grid grid-cols-1 ${colsClass} gap-4 my-16 md:my-20`}>
       {images.map((img, idx) => (
         <div key={idx} className={img.size === "large" ? "md:col-span-2" : ""}>
+          {/* The fraction has to track the same two things the layout does —
+              the column count and whether this item spans two of them — or a
+              "large" item in a four-up grid is served at quarter width and
+              upscales. */}
           <img
-            src={img.url}
+            {...responsiveImage(
+              img.url,
+              columnFraction((img.size === "large" ? 2 : 1) / columns)
+            )}
             alt={img.caption || `Gallery image ${idx + 1}`}
+            loading="lazy"
             className="w-full h-auto object-cover"
           />
           {img.caption && (
@@ -131,7 +157,11 @@ const VideoBlock = ({
       {videoType === "file" && videoFileUrl ? (
         <video
           src={videoFileUrl}
-          poster={posterUrl}
+          // `poster` takes a single URL with no srcSet equivalent, so it's
+          // capped at the widest the content column ever gets rather than
+          // sized per viewport. Still the difference between a 1824px frame
+          // and whatever the original happened to be.
+          poster={posterUrl ? imageUrl(posterUrl, 1824) : undefined}
           controls
           autoPlay={autoplay}
           muted={autoplay}
@@ -187,11 +217,21 @@ const BeforeAfterBlock = ({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
       <div>
         <span className="block text-xs uppercase tracking-widest text-brand-graphite mb-2 font-sans">{beforeLabel}</span>
-        <img src={beforeImage} alt={beforeLabel} className="w-full h-auto" />
+        <img
+          {...responsiveImage(beforeImage, columnFraction(1 / 2))}
+          alt={beforeLabel}
+          loading="lazy"
+          className="w-full h-auto"
+        />
       </div>
       <div>
         <span className="block text-xs uppercase tracking-widest text-brand-graphite mb-2 font-sans">{afterLabel}</span>
-        <img src={afterImage} alt={afterLabel} className="w-full h-auto" />
+        <img
+          {...responsiveImage(afterImage, columnFraction(1 / 2))}
+          alt={afterLabel}
+          loading="lazy"
+          className="w-full h-auto"
+        />
       </div>
     </div>
   </div>
@@ -226,7 +266,13 @@ const TypographyBlock = ({ fonts }: { fonts: { name: string; usage?: string; sam
             </div>
             <div className="md:col-span-8">
               {font.imageUrl ? (
-                <img src={font.imageUrl} alt={font.name} className="w-full h-auto" />
+                // md:col-span-8 of a 12-column grid.
+                <img
+                  {...responsiveImage(font.imageUrl, columnFraction(2 / 3))}
+                  alt={font.name}
+                  loading="lazy"
+                  className="w-full h-auto"
+                />
               ) : font.sample ? (
                 <p className="text-4xl md:text-6xl">{font.sample}</p>
               ) : (
@@ -364,9 +410,14 @@ const ProjectDetailPage = async ({ params }: PageProps) => {
       </header>
 
       <div className="w-full md:h-[90vh]">
+        {/* The one image on the page that isn't lazy. It sits directly under a
+            short text header, so it's the LCP element on most viewports and
+            deferring it is the classic way to make this metric worse. */}
         <img
-          src={project.heroImage}
+          {...responsiveImage(project.heroImage, FULL_BLEED)}
           alt={project.title}
+          loading="eager"
+          fetchPriority="high"
           className="w-full h-auto md:h-full object-contain md:object-cover"
         />
       </div>
@@ -375,7 +426,16 @@ const ProjectDetailPage = async ({ params }: PageProps) => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
           <div className="md:col-span-4" />
           <div className="md:col-span-8">
-            <h2 className="font-sans text-sm md:text-base text-brand-blue mb-6 md:mb-8">The Challenge</h2>
+            {/* The eyebrow reveals; the paragraph below it does not. ScrollRevealText
+                runs its own scrubbed wipe off its container's measured position, so
+                an ancestor carrying a reveal transform would have it measuring a
+                moving element and the wipe would map to the wrong scroll range. */}
+            <h2
+              className="font-sans text-sm md:text-base text-brand-blue mb-6 md:mb-8 reveal-init"
+              data-reveal
+            >
+              The Challenge
+            </h2>
             <ScrollRevealText text={project.brief} className="font-serif text-2xl md:text-4xl font-medium leading-snug" />
           </div>
         </div>
@@ -390,7 +450,13 @@ const ProjectDetailPage = async ({ params }: PageProps) => {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
             <div className="md:col-span-4" />
             <div className="md:col-span-8">
-              <h2 className="font-sans text-sm md:text-base text-brand-blue mb-6 md:mb-8">Results & Impact</h2>
+              {/* Same split as The Challenge above — eyebrow only. */}
+              <h2
+                className="font-sans text-sm md:text-base text-brand-blue mb-6 md:mb-8 reveal-init"
+                data-reveal
+              >
+                Results & Impact
+              </h2>
               <ScrollRevealText text={project.results} className="font-serif text-2xl md:text-4xl font-medium leading-snug" />
             </div>
           </div>
@@ -400,7 +466,8 @@ const ProjectDetailPage = async ({ params }: PageProps) => {
       <section className="w-full bg-brand-black text-brand-white py-16 md:py-32 px-6 md:px-12 hover:bg-brand-blue transition-colors duration-500 cursor-pointer overflow-hidden">
         <Link
           href={`/work/${nextProject.slug}`}
-          className="block max-w-[1920px] mx-auto text-center"
+          className="block max-w-[1920px] mx-auto text-center reveal-init"
+          data-reveal
         >
           <span className="font-serif italic text-lg md:text-xl opacity-70 mb-4 block">
             Next Case Study

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from "react";
-import { gsap, useGSAP } from "../lib/gsap";
+import React from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import CopyLabel from "./CopyLabel";
 import { EASE, DUR_BUBBLE } from "./motion";
 
@@ -20,6 +20,21 @@ import { EASE, DUR_BUBBLE } from "./motion";
  * and black on the white contact page. A single colour would make one of them
  * invisible, so "the same bubble" means same geometry, same motion, same
  * behaviour — surface flipped.
+ *
+ * Driven by Motion rather than GSAP because `visible` is React state and this is
+ * a direct mapping from it to a visual state. Declaring the target and letting
+ * Motion interpolate replaces a GSAP tween that needed an explicit dependency
+ * array to notice the state at all, plus `overwrite: "auto"` so that hovering on
+ * and off faster than the animation eased from wherever it was instead of
+ * stacking tweens. Motion does both by default.
+ *
+ * The hidden state is an unmount, via AnimatePresence, rather than the
+ * visibility:hidden that GSAP's autoAlpha wrote. Same outcome for assistive tech —
+ * a bubble that isn't there can't be announced — but arrived at without needing a
+ * property that has to flip at the *end* of a fade and not the start. The exit
+ * duration is DUR_BUBBLE, which is what BUBBLE_EXIT_MS is derived from, so the
+ * label in useCopyToClipboard resets exactly as the bubble finishes leaving
+ * instead of flipping back mid-fade.
  */
 
 type Tone = "onDark" | "onLight";
@@ -51,50 +66,33 @@ const CopyBubble: React.FC<Props> = ({
   idleLabel = "Click to copy",
   copiedLabel = "Copied!",
 }) => {
-  const bubbleRef = useRef<HTMLSpanElement>(null);
-
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add(
-        {
-          motion: "(prefers-reduced-motion: no-preference)",
-          still: "(prefers-reduced-motion: reduce)",
-        },
-        (ctx) => {
-          const duration = ctx.conditions?.motion ? DUR_BUBBLE : 0;
-          // overwrite:"auto" so hovering on and off faster than the animation
-          // eases from wherever it is rather than stacking tweens.
-          gsap.to(bubbleRef.current, {
-            autoAlpha: visible ? 1 : 0,
-            x: visible ? 0 : -SLIDE_PX,
-            duration,
-            ease: EASE,
-            overwrite: "auto",
-          });
-        }
-      );
-      return () => mm.revert();
-    },
-    { dependencies: [visible] }
-  );
+  const reduce = useReducedMotion();
 
   return (
     // Absolute inside a zero-width box is load-bearing: it lets the bubble sit
     // beside the email without reserving any space, so nothing shifts when it
     // comes and goes.
     <span className="relative w-0">
-      {/* -translate-y-1/2 and GSAP's x live together deliberately. Tailwind v4
-          compiles translate utilities to the standalone `translate` property
-          while GSAP writes `transform`, and the two compose — so the class holds
-          the vertical centring and GSAP owns the horizontal slide, on separate
-          axes, without either clobbering the other. */}
-      <span
-        ref={bubbleRef}
-        className={`absolute left-0 top-1/2 -translate-y-1/2 px-4 py-2 text-sm font-medium rounded-full ${TONES[tone]} invisible opacity-0`}
-      >
-        <CopyLabel idle={idleLabel} done={copiedLabel} showDone={copied} />
-      </span>
+      <AnimatePresence>
+        {visible && (
+          <motion.span
+            // y:"-50%" carries the vertical centring, rather than a
+            // -translate-y-1/2 class. Motion writes `transform` and owns both
+            // axes of it, so the offset has to be declared alongside x or it
+            // would be overwritten and the bubble would sit low. (Under GSAP the
+            // two could be split, because Tailwind v4 compiles translate
+            // utilities to the standalone `translate` property, which composes
+            // with `transform`.)
+            initial={{ opacity: 0, x: -SLIDE_PX, y: "-50%" }}
+            animate={{ opacity: 1, x: 0, y: "-50%" }}
+            exit={{ opacity: 0, x: -SLIDE_PX, y: "-50%" }}
+            transition={{ duration: reduce ? 0 : DUR_BUBBLE, ease: EASE }}
+            className={`absolute left-0 top-1/2 px-4 py-2 text-sm font-medium rounded-full ${TONES[tone]}`}
+          >
+            <CopyLabel idle={idleLabel} done={copiedLabel} showDone={copied} />
+          </motion.span>
+        )}
+      </AnimatePresence>
     </span>
   );
 };

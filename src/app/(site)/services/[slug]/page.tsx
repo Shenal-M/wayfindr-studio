@@ -1,10 +1,21 @@
 import React from "react";
-import Image from "next/image";
+// Deliberately not next/image. Sanity's CDN is itself a transformation CDN, so
+// routing these through Next's optimizer means a second fetch and re-encode of
+// bytes that already arrive at the right size and format — billed per
+// transform on Vercel, for no saving. It also can't serve the fallback
+// fixtures: picsum.photos isn't in next.config.ts remotePatterns, so any
+// next/image on a fallback thumbnail is a hard error, not a degraded image.
+// See src/sanity/lib/imageUrl.ts.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { groq } from "next-sanity";
 
 import { client } from "../../../../sanity/lib/client";
+import {
+  HALF_COLUMN,
+  SERVICE_HERO,
+  responsiveImage,
+} from "../../../../sanity/lib/imageUrl";
 import { SERVICE_BY_SLUG_QUERY, PROJECTS_BY_SERVICE_TAG_QUERY, SERVICES_QUERY } from "../../../../sanity/lib/queries";
 import type { Service, Project } from "../../../../types";
 import { AGENCY_PAGE_FALLBACK, PROJECTS as FALLBACK_PROJECTS } from "../../../../constants";
@@ -128,7 +139,11 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
       <section className="pt-12 md:pt-16 pb-20 md:pb-32">
         <div className="px-6 md:px-12 max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-end">
-            <div className="md:col-span-6">
+            {/* The hero copy and its artwork reveal as two items rather than one,
+                so the text lands a beat before the image — the batch's stagger
+                gives that for free. Both are above the fold, so they fire
+                immediately on load and read as the page's entrance. */}
+            <div className="md:col-span-6 reveal-init" data-reveal>
               <h1 className="font-sans font-bold text-5xl md:text-6xl lg:text-7xl leading-[0.95] text-brand-black mb-6">
                 {title}
               </h1>
@@ -136,15 +151,22 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
                 {description}
               </p>
             </div>
-            <div className="md:col-span-6 flex justify-center md:justify-end">
+            <div
+              className="md:col-span-6 flex justify-center md:justify-end reveal-init"
+              data-reveal
+            >
               <div className="w-full max-w-md md:max-w-lg lg:max-w-xl aspect-square">
                 {useCustomServiceImage && heroImage ? (
                   // Custom user-uploaded image
-                  <Image 
-                    src={heroImage} 
+                  // The previous width={400} height={400} was below what this
+                  // box actually paints — it grows to max-w-xl, 576px — so the
+                  // image upscaled on desktop and had no `sizes` to size it on
+                  // mobile. SERVICE_HERO tracks the real breakpoints.
+                  <img
+                    {...responsiveImage(heroImage, SERVICE_HERO)}
                     alt={title}
-                    width={400}
-                    height={400}
+                    loading="eager"
+                    fetchPriority="high"
                     className="w-full h-full object-cover"
                   />
                 ) : title.toLowerCase().includes("strategy") ? (
@@ -213,8 +235,14 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
       <section className="py-16 md:py-24 px-6 md:px-12 max-w-[1920px] mx-auto bg-brand-black relative overflow-hidden">
         <div className="relative z-10 max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+            {/* Each card reveals on its own, so the grid fills in as a wave
+                rather than appearing as a block. This is the section the stagger
+                does the most for, and it's also why ScrollRevealProvider caps a
+                batch: at md+ this is three columns and the cards in a row cross
+                the trigger together, but below md it collapses to one column and
+                every card would otherwise be in a single batch. */}
             {subServices?.map((item, index) => (
-              <div key={index} className="flex flex-col py-4">
+              <div key={index} className="flex flex-col py-4 reveal-init" data-reveal>
                 <h3 className="font-sans text-2xl md:text-3xl font-semibold text-brand-white mb-4">
                   {item.title}
                 </h3>
@@ -229,7 +257,10 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
 
       {/* Service Navigation Section */}
       <section className="px-6 md:px-12 max-w-[1920px] mx-auto bg-brand-white border-t border-brand-border">
-        <div className="flex relative -mx-6 md:-mx-12">
+        {/* Revealed as one block, not two. The pair reads as a single navigation
+            control — staggering the halves against each other would draw
+            attention to the divider rather than to either destination. */}
+        <div className="flex relative -mx-6 md:-mx-12 reveal-init" data-reveal>
           {/* Previous Service */}
           {previousService ? (
             <Link
@@ -278,7 +309,7 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
       {/* Our Work Section */}
       {relatedProjects.length > 0 && (
         <section className="py-20 md:py-32 px-6 md:px-12 max-w-[1920px] mx-auto border-t border-brand-border">
-          <div className="mb-16 md:mb-20">
+          <div className="mb-16 md:mb-20 reveal-init" data-reveal>
             <h2 className="font-sans text-4xl md:text-5xl lg:text-6xl font-bold text-brand-black">
               Our work
             </h2>
@@ -288,12 +319,14 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
               <Link
                 href={`/work/${project.slug}`}
                 key={project.slug}
-                className="group block"
+                className="group block reveal-init"
+                data-reveal
               >
                 <div className="relative overflow-hidden aspect-[4/3] md:aspect-[5/4] bg-brand-offwhite">
                   <img
-                    src={project.thumbnail}
+                    {...responsiveImage(project.thumbnail, HALF_COLUMN)}
                     alt={project.title}
+                    loading="lazy"
                     className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
                   />
                 </div>
@@ -302,7 +335,7 @@ const ServicePage = async ({ params }: { params: Promise<{ slug: string }> }) =>
           </div>
           {/* Was <ViewAllButton align="left" />, whose only job was this wrapper
               plus a button identical to the shared one. */}
-          <div className="flex justify-start mt-12">
+          <div className="flex justify-start mt-12 reveal-init" data-reveal>
             <Button href="/work">See more work</Button>
           </div>
         </section>

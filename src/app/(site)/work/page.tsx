@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { client } from "../../../sanity/lib/client";
+import { HALF_COLUMN, responsiveImage } from "../../../sanity/lib/imageUrl";
 import { PROJECTS_QUERY, WORK_PAGE_QUERY } from "../../../sanity/lib/queries";
 import type { Project, WorkPage as WorkPageType } from "../../../types";
 import { PROJECTS as FALLBACK_PROJECTS, WORK_PAGE_FALLBACK } from "../../../constants";
@@ -63,12 +64,14 @@ const WorkPage = async () => {
             <Link
               href={`/work/${project.slug}`}
               key={project.slug}
-              className="group block"
+              className="group block reveal-init"
+              data-reveal
             >
               <div className="relative overflow-hidden mb-6 aspect-[4/3] bg-brand-offwhite">
                 <img
-                  src={project.thumbnail}
+                  {...responsiveImage(project.thumbnail, HALF_COLUMN)}
                   alt={project.title}
+                  loading="lazy"
                   className="object-cover w-full h-full transform transition-all duration-500 ease-out group-hover:scale-[1.02] group-hover:brightness-95 group-hover:contrast-[1.05]"
                 />
               </div>

@@ -2,6 +2,7 @@ import React from "react";
 import Navigation from "../../components/Navigation";
 import FooterAlt from "../../components/FooterAlt";
 import SmoothScrollProvider from "../../components/SmoothScrollProvider";
+import ScrollRevealProvider from "../../components/ScrollRevealProvider";
 import { client } from "../../sanity/lib/client";
 import { SITE_SETTINGS_QUERY } from "../../sanity/lib/queries";
 import type { SiteSettings } from "../../types";
@@ -43,17 +44,18 @@ function sanitizeSvg(svg: string) {
  *
  * This used to parse out only the viewBox numbers and hand them to an <img> as
  * width/height, to reserve the right height before the file downloaded. Inlining
- * is better on three counts:
+ * is better on two counts:
  *
- *  1. It stops the wordmark jittering. Painted as an image it was subject to
- *     device-pixel snapping while the text beside it was positioned with
- *     sub-pixel precision, so inside ScrollSmoother's transformed content the two
- *     stepped against each other — clearly in Firefox, subtly in Chrome. Inline
- *     SVG is vector geometry, painted like the text is.
- *  2. No layout shift at all, rather than a reserved box that gets filled later.
+ *  1. No layout shift at all, rather than a reserved box that gets filled later.
  *     The geometry is in the HTML, so there is nothing to arrive.
- *  3. One fewer network request, on every page — the footer is in the shared
+ *  2. One fewer network request, on every page — the footer is in the shared
  *     layout. The asset is ~2KB, comfortably less than the request it replaces.
+ *
+ * There was a third reason that no longer applies: as an <img> the wordmark's
+ * painted rect was snapped to whole device pixels while the text beside it was
+ * positioned sub-pixel, so inside ScrollSmoother's transformed content the two
+ * visibly stepped against each other. Lenis scrolls natively and transforms
+ * nothing, so that class of problem is gone either way.
  */
 async function loadFooterLogo(url?: string) {
   if (!url?.startsWith("http")) return null;
@@ -89,21 +91,28 @@ export default async function SiteLayout({
       {/* Fixed-position — must stay outside the smooth wrapper's transform. */}
       <Navigation />
       <SmoothScrollProvider>
-        {/* svh rather than screen (vh), to match the hero. vh is the largest
-            viewport height, so on mobile it reserves more than is on screen and
-            adds scroll that isn't wanted; svh is the stable smallest one. */}
-        <div className="flex flex-col min-h-svh">
-          {/* Must match the fixed header in Navigation.tsx: its h-16 plus the
-              1px border-b, so 65px total. Padding of a plain 4rem left content
-              sitting 1px under the border. */}
-          <main className="flex-grow pt-[calc(4rem+1px)]">{children}</main>
-          <FooterAlt
-            socialLinks={socialLinks}
-            email={email}
-            aboutText={aboutText}
-            logoMarkup={logoMarkup}
-          />
-        </div>
+        {/* Inside the smooth scroll provider, because the reveals' ScrollTriggers
+            read the scroll position Lenis drives and both are refreshed together
+            on navigation. Wrapping the whole page rather than sitting per-page so
+            every route opts in with a `data-reveal` attribute and no client
+            boundary of its own. */}
+        <ScrollRevealProvider>
+          {/* svh rather than screen (vh), to match the hero. vh is the largest
+              viewport height, so on mobile it reserves more than is on screen and
+              adds scroll that isn't wanted; svh is the stable smallest one. */}
+          <div className="flex flex-col min-h-svh">
+            {/* Must match the fixed header in Navigation.tsx: its h-16 plus the
+                1px border-b, so 65px total. Padding of a plain 4rem left content
+                sitting 1px under the border. */}
+            <main className="flex-grow pt-[calc(4rem+1px)]">{children}</main>
+            <FooterAlt
+              socialLinks={socialLinks}
+              email={email}
+              aboutText={aboutText}
+              logoMarkup={logoMarkup}
+            />
+          </div>
+        </ScrollRevealProvider>
       </SmoothScrollProvider>
     </>
   );
