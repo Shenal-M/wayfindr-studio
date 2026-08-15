@@ -137,10 +137,44 @@ export const columnFraction = (fraction: number): ImageSizing => {
   };
 };
 
-/** Edge-to-edge, no column: the homepage lead project and the case-study hero. */
-export const FULL_BLEED: ImageSizing = {
+/**
+ * Edge-to-edge and cover-cropped into a box of fixed height: the case study
+ * hero, and the only sizing here whose `sizes` is not roughly the width of the
+ * box it sits in.
+ *
+ * ── WHY IT IS OVER 100vw ───────────────────────────────────────────────────
+ * `sizes` describes how wide the image is *painted*, and `object-cover` paints
+ * a landscape photograph far wider than its container whenever the container is
+ * portrait. Cover scales until both axes are filled, so on a portrait box the
+ * height is what binds and the width overflows and is clipped:
+ *
+ *     painted width = box height × image aspect
+ *
+ * On a 393×852 phone the hero box is 393 × 70svh = 393×596, and a 16:9 source
+ * is therefore painted 596 × 1.78 ≈ 1060 CSS px wide — 2.7× the viewport. A
+ * plain `100vw` told the browser 393px, it multiplied by the 3× display and
+ * asked for 1179, and picked the 1440 candidate to paint across 1060 CSS px.
+ * That is an effective 1.36× on a 3× screen, which is exactly the softness this
+ * fixes. On desktop the box is landscape, the width binds instead, painted
+ * width really is 100vw, and nothing was ever wrong — which is why this only
+ * ever showed up on a phone.
+ *
+ * `(orientation: portrait)` rather than a width breakpoint, because the
+ * magnification is caused by the box being taller than it is wide and by
+ * nothing else. A width query gets it wrong in both directions: a portrait
+ * tablet is 768px and needs the boost, a phone turned sideways is narrow and
+ * does not. Orientation asks the actual question. `sizes` takes a full media
+ * condition, not just a width one.
+ *
+ * 260vw covers the range in one number. Portrait phone works out at ~2.7 (the
+ * 70svh box), portrait tablet at ~2.4 (the full-height box), and a 3:2 source
+ * rather than 16:9 lowers both. Overstating is the safe direction and costs
+ * nothing real here, since anything above about 220vw saturates the top of the
+ * ladder on a 2× display anyway.
+ */
+export const COVER_HERO: ImageSizing = {
   widths: [768, 1080, 1440, 1920, 2560],
-  sizes: "100vw",
+  sizes: "(orientation: portrait) 260vw, 100vw",
 };
 
 /**

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { client } from "../../../../sanity/lib/client";
 import {
-  FULL_BLEED,
+  COVER_HERO,
   columnFraction,
   imageUrl,
   responsiveImage,
@@ -465,7 +465,7 @@ const ProjectDetailPage = async ({ params }: PageProps) => {
             opacity is not eligible to be the Largest Contentful Paint. Fading it
             in would hand back exactly what those two attributes buy. */}
         <img
-          {...responsiveImage(project.heroImage, FULL_BLEED)}
+          {...responsiveImage(project.heroImage, COVER_HERO)}
           alt={project.title}
           loading="eager"
           fetchPriority="high"
