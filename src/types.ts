@@ -35,6 +35,69 @@ export type FAQItem = {
   answer: string;
 };
 
+/** One numbered row in the homepage's capabilities list. */
+export type HomeCapability = {
+  title: string;
+  body: string;
+};
+
+/** One cell in the homepage's collections grid. */
+export type HomeCollection = {
+  title: string;
+  body: string;
+};
+
+/**
+ * The homepage document, fully resolved.
+ *
+ * Nothing here is optional, and that is the point: the raw Sanity document has
+ * every field optional, and resolveHome in (site)/page.tsx fills each gap from
+ * HOMEPAGE_FALLBACK before the page ever sees it. So the component renders
+ * copy, never `copy ?? "something"` — the defaulting happens once, in one place,
+ * rather than being scattered across a hundred lines of JSX where a missed `??`
+ * is an empty heading in production.
+ *
+ * `heroVideoUrl` is the exception and is genuinely optional: there is no
+ * sensible stand-in for a video, so the hero falls back to its flat ground.
+ */
+export type HomeContent = {
+  title: string;
+  metaDescription: string;
+
+  heroVideoUrl?: string;
+  heroPosterUrl?: string;
+  heroLeadLine: string;
+  heroEndings: string[];
+  heroScrollCue: string;
+
+  positionLabel: string;
+  positionStatement: string;
+  positionNote: string;
+
+  railLabel: string;
+  railHint: string;
+  railEndTitle: string;
+  railEndCta: string;
+
+  capabilitiesLabel: string;
+  capabilities: HomeCapability[];
+
+  collectionsLead: string;
+  collectionsAccent: string;
+  collections: HomeCollection[];
+
+  testimonialsLabel: string;
+};
+
+/** The same shape as it actually arrives from Sanity: nothing guaranteed. */
+export type HomeDocument = Partial<
+  Omit<HomeContent, "capabilities" | "collections" | "heroEndings">
+> & {
+  heroEndings?: string[] | null;
+  capabilities?: HomeCapability[] | null;
+  collections?: HomeCollection[] | null;
+};
+
 export type Capability = {
   title: string;
   items: string[];

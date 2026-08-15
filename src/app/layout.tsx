@@ -71,7 +71,7 @@ export default function RootLayout({
         {/* With scripting off the failsafe above never runs, so the start states
             are neutralised here instead. */}
         <noscript>
-          <style>{`.anim .reveal-init{opacity:1!important;transform:none!important}.anim .hero-line{visibility:visible!important}`}</style>
+          <style>{`.anim .reveal-init{opacity:1!important;transform:none!important}.anim .home-line,.anim .home-word-init,.anim .home-cell-title{visibility:visible!important}.anim .home-rule,.anim .cap-rule,.anim .cap-title,.anim .cap-tag{transform:none!important}.anim .cap-row,.anim .cap-tag{opacity:1!important}`}</style>
         </noscript>
       </head>
       {/* suppressHydrationWarning covers attributes that browser extensions

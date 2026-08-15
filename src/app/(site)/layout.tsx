@@ -1,5 +1,6 @@
 import React from "react";
 import Navigation from "../../components/Navigation";
+import { NavChromeProvider, SiteMain } from "../../components/NavChrome";
 import FooterAlt from "../../components/FooterAlt";
 import SmoothScrollProvider from "../../components/SmoothScrollProvider";
 import ScrollRevealProvider from "../../components/ScrollRevealProvider";
@@ -87,10 +88,22 @@ export default async function SiteLayout({
   const logoMarkup = await loadFooterLogo(siteSettings?.footerLogoSvg);
 
   return (
-    <>
-      {/* Fixed-position — must stay outside the smooth wrapper's transform. */}
-      <Navigation />
+    // Wraps the header and the page together, because it is the only thing they
+    // share: the header has to know whether this route's first screen runs
+    // underneath it, and on the homepage that fact belongs to the hero. See
+    // NavChrome.tsx.
+    <NavChromeProvider>
       <SmoothScrollProvider>
+        {/* Inside the smooth-scroll provider, not beside it.
+
+            It used to sit outside, because ScrollSmoother translated a wrapper
+            element and anything `position: fixed` within that subtree got
+            dragged along by the transform. Lenis animates the real window
+            scroll and transforms nothing, so fixed positioning behaves
+            normally and the header no longer has to be hoisted out — which is
+            what lets the mobile menu reach the Lenis instance to stop page
+            scrolling while it is open. */}
+        <Navigation />
         {/* Inside the smooth scroll provider, because the reveals' ScrollTriggers
             read the scroll position Lenis drives and both are refreshed together
             on navigation. Wrapping the whole page rather than sitting per-page so
@@ -101,10 +114,15 @@ export default async function SiteLayout({
               viewport height, so on mobile it reserves more than is on screen and
               adds scroll that isn't wanted; svh is the stable smallest one. */}
           <div className="flex flex-col min-h-svh">
-            {/* Must match the fixed header in Navigation.tsx: its h-16 plus the
-                1px border-b, so 65px total. Padding of a plain 4rem left content
-                sitting 1px under the border. */}
-            <main className="flex-grow pt-[calc(4rem+1px)]">{children}</main>
+            {/* Reserves the fixed header's height as top padding — except on
+                routes whose first screen is meant to run underneath it, where
+                that padding would show through the transparent bar as a strip
+                of page background. SiteMain reads which case it is from
+                NavChrome. */}
+            <SiteMain>{children}</SiteMain>
+            {/* Unchanged, deliberately. The homepage was rebuilt around it
+                rather than bringing its own closing block, so every page still
+                ends the same way. */}
             <FooterAlt
               socialLinks={socialLinks}
               email={email}
@@ -114,7 +132,7 @@ export default async function SiteLayout({
           </div>
         </ScrollRevealProvider>
       </SmoothScrollProvider>
-    </>
+    </NavChromeProvider>
   );
 }
 

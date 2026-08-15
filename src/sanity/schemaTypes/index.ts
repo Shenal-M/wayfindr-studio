@@ -290,37 +290,251 @@ export const schema: { types: SchemaTypeDefinition[] } = {
       },
     },
 
-    // Homepage (hero copy etc. – optional)
+    // Homepage (singleton)
+    //
+    // Every word and the video on the homepage come from here. Anything left
+    // empty falls back to the copy in src/constants.ts (HOMEPAGE_FALLBACK), so
+    // a half-filled document renders a complete page rather than a broken one —
+    // which also means an editor can fill this in one section at a time.
+    //
+    // The previous version of this document had `heroLine1/2/3` for the old
+    // three-line hero. That hero is gone and so are the fields. Their data is
+    // still in the dataset (Sanity keeps unknown fields), so nothing was
+    // destroyed by removing them here — but nothing reads it either.
     {
       name: "homepage",
       title: "Homepage",
       type: "document",
+      description: "All copy and media for the homepage",
+      groups: [
+        { name: "meta", title: "Metadata" },
+        { name: "hero", title: "Hero", default: true },
+        { name: "position", title: "The Position" },
+        { name: "rail", title: "Work Rail" },
+        { name: "capabilities", title: "Capabilities" },
+        { name: "collections", title: "Collections" },
+        { name: "testimonials", title: "Testimonials" },
+      ],
       fields: [
         {
           name: "title",
-          title: "Browser Title (Metadata)",
+          title: "Browser Title",
           type: "string",
-          description: "Title shown in the browser tab",
+          description: "Title shown in the browser tab and in search results",
+          group: "meta",
         },
         {
-          name: "heroLine1",
-          title: "Hero Line 1",
-          type: "string",
-          description: "First line of the hero text (e.g. Navigating)",
+          name: "metaDescription",
+          title: "Meta Description",
+          type: "text",
+          rows: 2,
+          description:
+            "One or two sentences for search results and link previews",
+          group: "meta",
+        },
+
+        // ── Hero ────────────────────────────────────────────────────────────
+        {
+          name: "heroVideo",
+          title: "Hero Video",
+          type: "file",
+          description:
+            "Plays full-bleed behind the headline, muted and looping. Keep it SHORT — 10 to 15 seconds that loops cleanly, re-encoded to roughly 2MB. This file downloads before anyone sees the page move, so a large one is felt directly. 1280x720 is plenty behind type.",
+          options: { accept: "video/mp4,video/webm" },
+          group: "hero",
         },
         {
-          name: "heroLine2",
-          title: "Hero Line 2",
-          type: "string",
-          description: "Second line of the hero text (e.g. The Chaos)",
+          name: "heroPoster",
+          title: "Hero Poster Frame",
+          type: "image",
+          description:
+            "Shown while the video downloads. Take it from the first frame of the clip so there is no visible switch when the video starts.",
+          group: "hero",
         },
         {
-          name: "heroLine3",
-          title: "Hero Line 3",
+          name: "heroLeadLine",
+          title: "Headline — Fixed Line",
           type: "string",
-          description: "Third line of the hero text (e.g. Of Brands.)",
+          description:
+            "The half of the sentence that never changes (e.g. 'We make brands that')",
+          group: "hero",
+        },
+        {
+          name: "heroEndings",
+          title: "Headline — Cycling Endings",
+          type: "array",
+          of: [{ type: "string" }],
+          description:
+            "The sentence finishes itself with each of these in turn. Keep them within a couple of characters of each other in length — they share one slot, so a set ranging from short to very long either wraps or leaves the short ones stranded.",
+          group: "hero",
+        },
+        {
+          name: "heroScrollCue",
+          title: "Scroll Cue",
+          type: "string",
+          description: "Small label at the bottom of the first screen",
+          group: "hero",
+        },
+
+        // ── The position ────────────────────────────────────────────────────
+        {
+          name: "positionLabel",
+          title: "Section Label",
+          type: "string",
+          description: "Small label above the statement (e.g. 'The position')",
+          group: "position",
+        },
+        {
+          name: "positionStatement",
+          title: "Statement",
+          type: "text",
+          rows: 4,
+          description:
+            "Set large, and wipes from grey to black line by line as it scrolls past. Two or three sentences.",
+          group: "position",
+        },
+        {
+          name: "positionNote",
+          title: "Closing Note",
+          type: "string",
+          description:
+            "The short line under the statement, set in italic serif and in the brand blue",
+          group: "position",
+        },
+
+        // ── The rail ────────────────────────────────────────────────────────
+        {
+          name: "railLabel",
+          title: "Section Label",
+          type: "string",
+          description: "e.g. 'In the field — Selected work'",
+          group: "rail",
+        },
+        {
+          name: "railHint",
+          title: "Scroll Hint",
+          type: "string",
+          description:
+            "Shown at the right of the label on desktop (e.g. 'Keep scrolling'). Small screens always show 'Swipe' instead, because they scroll the rail by hand.",
+          group: "rail",
+        },
+        {
+          name: "railEndTitle",
+          title: "Closing Card — Title",
+          type: "text",
+          rows: 2,
+          description:
+            "The blue card at the end of the rail. Line breaks are kept.",
+          group: "rail",
+        },
+        {
+          name: "railEndCta",
+          title: "Closing Card — Link Label",
+          type: "string",
+          description: "e.g. 'View all'. Always links to the work index.",
+          group: "rail",
+        },
+
+        // ── Capabilities ────────────────────────────────────────────────────
+        {
+          name: "capabilitiesLabel",
+          title: "Section Label",
+          type: "string",
+          description: "e.g. 'Capabilities — Six, done properly'",
+          group: "capabilities",
+        },
+        {
+          name: "capabilities",
+          title: "Capabilities",
+          type: "array",
+          description:
+            "Numbered automatically in the order listed — drag to reorder rather than renumbering by hand.",
+          of: [
+            {
+              type: "object",
+              name: "capability",
+              fields: [
+                {
+                  name: "title",
+                  title: "Title",
+                  type: "string",
+                  validation: (Rule) => Rule.required(),
+                },
+                {
+                  name: "body",
+                  title: "Description",
+                  type: "text",
+                  rows: 3,
+                },
+              ],
+              preview: { select: { title: "title", subtitle: "body" } },
+            },
+          ],
+          group: "capabilities",
+        },
+
+        // ── Collections ─────────────────────────────────────────────────────
+        {
+          name: "collectionsLead",
+          title: "Headline",
+          type: "string",
+          description:
+            "The first part of the headline, set plain (e.g. 'We don't sell deliverables. We sell')",
+          group: "collections",
+        },
+        {
+          name: "collectionsAccent",
+          title: "Headline — Accent",
+          type: "string",
+          description:
+            "The end of the headline, set in italic serif and in the brand blue (e.g. 'how it lands.')",
+          group: "collections",
+        },
+        {
+          name: "collections",
+          title: "Collections",
+          type: "array",
+          description:
+            "The work grouped by the feeling it was briefed to produce. Four reads best — they sit in a 2x2 grid.",
+          of: [
+            {
+              type: "object",
+              name: "collection",
+              fields: [
+                {
+                  name: "title",
+                  title: "Title",
+                  type: "string",
+                  validation: (Rule) => Rule.required(),
+                },
+                {
+                  name: "body",
+                  title: "Description",
+                  type: "text",
+                  rows: 2,
+                },
+              ],
+              preview: { select: { title: "title", subtitle: "body" } },
+            },
+          ],
+          group: "collections",
+        },
+
+        // ── Testimonials ────────────────────────────────────────────────────
+        {
+          name: "testimonialsLabel",
+          title: "Section Label",
+          type: "string",
+          description:
+            "e.g. 'What they said afterwards'. The quotes themselves are edited under Testimonials.",
+          group: "testimonials",
         },
       ],
+      preview: {
+        prepare() {
+          return { title: "Homepage" };
+        },
+      },
     },
 
     // Brands used in the marquee

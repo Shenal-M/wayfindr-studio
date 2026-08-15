@@ -1,4 +1,97 @@
-import type { AgencyPage, Brand, FAQItem, Project, SocialLink, Testimonial, WorkPage } from "./types";
+import type { AgencyPage, Brand, FAQItem, HomeContent, Project, SocialLink, Testimonial, WorkPage } from "./types";
+
+/**
+ * The homepage's copy, used wherever the Sanity document leaves a field empty.
+ *
+ * Merged field by field rather than as a whole-document fallback, so an editor
+ * who has written the hero but not yet the capabilities gets their hero and this
+ * file's capabilities — not one or the other. See resolveHome in (site)/page.tsx.
+ *
+ * This is the copy the design was drawn against, so it is also the reference for
+ * length: the hero endings sit within two characters of each other because they
+ * share one slot sized to the longest, and the capability bodies are two lines
+ * at the width they are set. Copy that ignores those constraints will not break
+ * the page, but it will not look like the design either.
+ *
+ * There is deliberately no fallback video. A missing clip leaves the hero on its
+ * flat near-black ground, which is a composed state rather than a broken one —
+ * whereas a placeholder video shipped in the repo is a large file that somebody
+ * eventually forgets to replace.
+ */
+export const HOMEPAGE_FALLBACK: HomeContent = {
+  title: "Wayfindr Studio",
+  metaDescription: "Strategic design for ambitious brands.",
+
+  heroLeadLine: "We make brands that",
+  heroEndings: [
+    "refuse to blend in.",
+    "get chosen first.",
+    "outlive the trend.",
+    "travel without us.",
+  ],
+  heroScrollCue: "Scroll",
+
+  positionLabel: "The position",
+  positionStatement:
+    "Wayfindr is a strategic design studio for companies that would rather be chosen than found. We build the strategy, the identity and the product experience as one system — so the brand you promise upstairs is the brand people actually meet.",
+  positionNote: "No decks that die in a drive. No template answers.",
+
+  railLabel: "In the field — Selected work",
+  railHint: "Keep scrolling",
+  railEndTitle: "The rest of\nthe index",
+  railEndCta: "View all",
+
+  capabilitiesLabel: "Capabilities — Six, done properly",
+  capabilities: [
+    {
+      title: "Positioning",
+      body: "Where the brand stands, who it stands against, and the one sentence everyone internally can repeat without looking it up.",
+    },
+    {
+      title: "Identity Systems",
+      body: "Marks, type, colour and grid, built as rules rather than artwork — so the hundredth asset looks like the first.",
+    },
+    {
+      title: "Verbal Identity",
+      body: "Names, voice and the difference between a headline that sounds expensive and one that sounds true.",
+    },
+    {
+      title: "Digital Experience",
+      body: "Sites and products designed against real content and real speed budgets, not against a mood board.",
+    },
+    {
+      title: "Motion",
+      body: "How the brand moves. Not decoration — the part of the system that tells people what just happened.",
+    },
+    {
+      title: "Activation",
+      body: "Launches, campaigns and the governance that stops a good system quietly eroding in month four.",
+    },
+  ],
+
+  collectionsLead: "We don’t sell deliverables. We sell",
+  collectionsAccent: "how it lands.",
+  collections: [
+    {
+      title: "Feels inevitable",
+      body: "For categories where trust is the whole purchase. Fintech, infrastructure, B2B.",
+    },
+    {
+      title: "Feels expensive",
+      body: "Where the margin lives in perception. Beauty, retail, hospitality.",
+    },
+    {
+      title: "Feels alive",
+      body: "Brands that have to move, react and stay current without redrawing themselves.",
+    },
+    {
+      title: "Feels simple",
+      body: "Complicated products made obvious. Software, platforms, tools with teeth.",
+    },
+  ],
+
+  testimonialsLabel: "What they said afterwards",
+};
 
 export const SOCIAL_LINKS: SocialLink[] = [
   { platform: "Instagram", url: "#" },

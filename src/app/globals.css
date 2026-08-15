@@ -11,6 +11,24 @@
   --color-brand-offwhite: #f5f5f7;
   --color-brand-graphite: #4a4a4a;
   --color-brand-border: #e5e5e5;
+  /* Used only by the homepage.
+
+       ink    near-black with a blue cast rather than #050505. It is what shows
+              for the moment before the hero's first video frame decodes, so it
+              tracks the footage rather than the page; a white ground under a
+              dark clip is a flash on every load.
+       paper  warm off-white, the reading colour on near-black. Pure #ffffff on
+              #050505 is glare at body sizes.
+
+     This was five colours across five design variations, each changing the
+     *ground* it stood on. Four of those are gone and their tokens with them.
+
+     There is deliberately no second accent. A chartreuse was tried, then a warm
+     red, and both pulled every page they touched away from the studio's actual
+     language — the blue stops reading as *the* colour the moment something else
+     competes with it. */
+  --color-paper: #f2efe7;
+  --color-ink: #0a0a0c;
   /* `@theme inline` matters here: it inlines these values so they resolve
      against the next/font variables set on <html>, rather than being copied
      into a :root block that would evaluate before those exist. */
@@ -61,12 +79,30 @@ body {
    into view. Scaling it keeps the gesture the same size relative to what you can
    see.
 
-   A transform here is safe, unlike the hero's start state: the reveal tween
+   A transform here is safe, unlike the masked hero lines': the reveal tween
    animates `y` in pixels to 0, so GSAP reading this back off the computed matrix
    as pixels is exactly what's wanted. It's `yPercent` that can't survive being
-   parsed back — see the .hero-line note below. */
+   parsed back — see the .home-line note further down. */
 :root {
   --reveal-y: 24px;
+
+  /* The header's link colour while it is overlaid on a video hero.
+
+     The homepage samples the strip of footage directly behind the bar a few
+     times a second and overwrites this on <html>, so the links stay legible
+     over a clip that changes — see the sampler in components/home/HomePage.tsx
+     and `text-[var(--nav-ink)]` in Navigation.tsx.
+
+     Declared here rather than in the @theme block above, and that distinction
+     matters: `@theme inline` inlines its values into the utilities that use
+     them and does not guarantee a matching :root property, so a variable that
+     has to be readable and writable at runtime has to be a real custom property.
+
+     White because the hero's own ground is near-black, so this is the right
+     answer for the frames before the first measurement — and for the case where
+     the sampler never gets to run at all, which is what happens if the video is
+     served without CORS headers and the canvas taints. */
+  --nav-ink: #ffffff;
 }
 
 @media (min-width: 768px) {
@@ -80,15 +116,6 @@ body {
   transform: translateY(var(--reveal-y));
 }
 
-/* Deliberately NOT a transform. GSAP reads the computed transform as a pixel
-   matrix, so a translateY(100%) here would be parsed as y:180px and then the
-   tween's yPercent would stack on top of it, leaving the line permanently
-   offset by a line height. Hiding it instead lets GSAP own the transform
-   outright; the tween restores visibility via autoAlpha. */
-.anim .hero-line {
-  visibility: hidden;
-}
-
 /* GSAP does load in this case — it just declines to build the animations — so
    the start states have to be neutralised in CSS rather than left for a tween
    that will never run. */
@@ -96,10 +123,6 @@ body {
   .anim .reveal-init {
     opacity: 1;
     transform: none;
-  }
-
-  .anim .hero-line {
-    visibility: visible;
   }
 }
 
@@ -143,40 +166,50 @@ body {
   }
 }
 
-/* ScrollRevealText — a line that wipes from grey to black as it scrolls past.
-   The two copies are stacked: the grey one is the real text, the black one is an
-   aria-hidden overlay clipped to --line-progress.
+/* ScrollRevealText — a paragraph that wipes from grey to black as it scrolls.
 
-   The default is 100%, i.e. fully revealed, and that is the important part. The
-   animation clips backwards from this state, so anything that stops it from
-   running — reduced motion, viewports below md, a bundle that never loads —
-   leaves the paragraph fully black and readable. Defaulting to 0% would leave it
-   at the #c0c0c0 base colour, which is nowhere near enough contrast for body
-   copy. */
-.challenge-line {
-  position: relative;
-  display: block;
-  line-height: 1.3;
-  margin-bottom: 0.05em;
-}
+   One span per word, each painted by a two-stop gradient clipped to its own
+   glyphs. `--sweep` slides that gradient: at 0% the window sits over the black
+   half of a double-width image, at 100% over the grey half, and everything in
+   between puts a hard edge partway across the word. GSAP scrubs it per word with
+   an overlapping stagger, so what you see is one edge travelling through the
+   text, following whatever line breaks the browser chose.
 
-.challenge-line-base {
-  color: #c0c0c0;
-}
+   The default is 0%, i.e. fully revealed, and that is the important part. The
+   animation sweeps backwards from this state, so anything that stops it from
+   running — reduced motion, a bundle that never loads, scripting off entirely —
+   leaves the paragraph fully black and readable. Defaulting to the grey end
+   would leave body copy at #c9c9c9, which is nowhere near enough contrast.
 
-.challenge-line-reveal {
-  position: absolute;
-  inset: 0;
+   This replaced a version that stacked two copies of every line and clipped the
+   top one. Per word rather than per line because the old one chopped the text
+   into fixed seven-word blocks that each re-wrapped on narrow screens — see the
+   note in ScrollRevealText.tsx. One copy rather than two because a paragraph
+   duplicated in the DOM with half of it aria-hidden is a worse thing to hand a
+   screen reader than a paragraph. */
+.reveal-word {
+  /* Fully revealed. Every fallback path below depends on this being the
+     declared default rather than something JS has to set. */
+  --sweep: 0%;
   color: #050505;
-  /* clip-path rather than a masked gradient: it's a single composited clip with
-     no image to rasterise, and GSAP can scrub the custom property directly. */
-  clip-path: inset(0 calc(100% - var(--line-progress, 100%)) 0 0);
-  pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .challenge-line-reveal {
-    clip-path: none;
+/* Guarded because the rule inside sets `color: transparent` and leans entirely
+   on background-clip to paint the glyphs — without support that is invisible
+   text, which is a far worse failure than a paragraph that simply doesn't
+   animate. Anything that can't do this gets the plain black above. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .reveal-word {
+    /* inline-block so the word can carry its own background box. The spaces
+       between words are real text nodes, so lines still break normally. */
+    display: inline-block;
+    background-image: linear-gradient(to right, #050505 50%, #c9c9c9 50%);
+    background-size: 200% 100%;
+    background-position: var(--sweep) 0;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
 
@@ -187,8 +220,8 @@ body {
    painted the server-rendered HTML, so from() would show the finished row for one
    frame and then snatch it away. Same html.anim gate, same failsafe.
 
-   The percentage translate on .cap-title looks like exactly what the .hero-line
-   note above warns against, and the difference is the tween. GSAP reads a
+   The percentage translate on .cap-title looks like exactly what the .home-line
+   note below warns against, and the difference is the tween. GSAP reads a
    computed transform back as a pixel matrix, so this is only a problem when the
    tween then applies a *second*, differently-scaled offset — a yPercent. This one
    animates `y` to 0 in pixels, which is precisely what reading pixels back off
@@ -224,6 +257,56 @@ body {
   .anim .cap-rule,
   .anim .cap-title,
   .anim .cap-tag {
+    transform: none;
+  }
+}
+
+/* ── Homepage ───────────────────────────────────────────────────────────────
+   Start states for the homepage's own entrances. Same contract as everything
+   above: held in CSS behind `.anim` so GSAP — which runs in a layout effect,
+   after the SSR'd HTML has painted — never has to hide something that was
+   already on screen, and the root layout's failsafe un-hides all of it if the
+   bundle dies.
+
+   `home-` prefixed rather than folded into `.cap-*` so the homepage's start
+   states can be changed without touching any other page's. These began life
+   under a `v-` prefix, for the five design variations they were written
+   against; one of those became this page and the rest were deleted, which is
+   exactly the kind of pass the separate prefix was there to make safe. */
+
+/* A masked line, revealed by a yPercent tween. Visibility, never a transform —
+   GSAP reads a CSS translate back off the computed matrix as pixels and would
+   stack yPercent on top of it, stranding the line a full line-height down.
+
+   `home-word-init` is the same contract for the first of the cycling headline
+   endings: it is the one the server renders, so it needs a start state, and its
+   tween is a yPercent slide — which rules out holding that state as a transform
+   for exactly the reason above. The remaining endings are plain `opacity-0`
+   instead, because they have nothing to reveal and must stay hidden if the
+   bundle never arrives, or they all stack into one illegible pile.
+
+   `home-cell-title` is the same again, for the collection titles further down
+   the page. */
+.anim .home-line,
+.anim .home-word-init,
+.anim .home-cell-title {
+  visibility: hidden;
+}
+
+/* A hairline that draws left-to-right. Safe as a transform, unlike the above,
+   because the tween animates scaleX rather than a second offset. */
+.anim .home-rule {
+  transform: scaleX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim .home-line,
+  .anim .home-word-init,
+  .anim .home-cell-title {
+    visibility: visible;
+  }
+
+  .anim .home-rule {
     transform: none;
   }
 }

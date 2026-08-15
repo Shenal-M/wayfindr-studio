@@ -4,33 +4,50 @@ import { useRef } from "react";
 import { gsap, useGSAP } from "../lib/gsap";
 
 /**
- * A paragraph that wipes from grey to black, line by line, as it scrolls past.
+ * A paragraph that wipes from grey to black as it scrolls past.
  *
  * This is a scroll-*linked* animation — its progress is a function of scroll
  * position, not of a duration — so it belongs to ScrollTrigger. See
  * .claude/skills/animation-stack.
  *
- * It was previously a `window.addEventListener("scroll", …)` handler that computed
- * a progress array and called setState. Three things were wrong with that, and
- * they're the reason this file is worth reading before writing another one like
- * it:
+ * ── Why it reveals per word, not per line ─────────────────────────────────
  *
- *  1. It re-rendered this component, and reconciled every line, on every frame of
- *     every scroll. The animation writes one number per line; React was never
- *     needed to carry it. ScrollTrigger writes the number straight to a CSS
- *     custom property and the compositor does the rest — no render, no diff.
- *  2. The scroll maths was hand-rolled (`1 - rect.top / windowHeight`), so it
- *     didn't survive the element being taller than the viewport and had no notion
- *     of a refresh when layout changed underneath it.
- *  3. A raw scroll listener is unsynchronised with the frame loop. Everything
- *     else on this site now runs off GSAP's single ticker, which Lenis drives;
- *     this ran off whatever tick the browser's scroll event landed in, so it
- *     lagged the smooth scroll by a frame or two.
+ * It used to chop the text into fixed seven-word chunks and render each as a
+ * `display: block` line, wiping one chunk at a time. Seven words is roughly one
+ * line at this type size in a 1400px column, so on a wide desktop the chunks
+ * happened to line up with the real lines and it looked right.
  *
- * The revealed state is the DEFAULT, and the animation clips *backwards* from it.
- * That ordering is deliberate: it means no-JS, reduced-motion and mobile all land
- * on fully-black readable text, rather than on the grey base colour — which is
- * #c0c0c0 and nowhere near enough contrast to be the fallback for a paragraph.
+ * Nothing enforced that. Each chunk is still a block that wraps on its own, so
+ * the moment the column got narrower than seven words could span, every chunk
+ * wrapped to two visual lines and the paragraph came out double-broken — a long
+ * line, a short line, a long line, a short line, at breakpoints nobody was
+ * looking at. On a phone it was unreadable. The chunking was a guess about
+ * layout baked into the markup, and the browser is the only thing that knows
+ * where a line actually breaks.
+ *
+ * So the text is now one flowing paragraph of inline words. Wrapping is the
+ * browser's again — correct at every width, with no measurement to keep in step
+ * — and each word carries its own share of the wipe, which reads as the same
+ * hard edge travelling across each line because that is exactly what it is.
+ *
+ * That also lets it run below 768px, where it was previously switched off. The
+ * old reason was that a chunked paragraph is most of a phone's screen and the
+ * wipe would have fired all at once; a per-word sweep over the paragraph's own
+ * scroll range has no such problem.
+ *
+ * ── The mechanism ─────────────────────────────────────────────────────────
+ *
+ * One span per word, no duplicate copy. The old version stacked two copies of
+ * every line and clipped the top one, which meant the whole paragraph existed
+ * twice in the DOM with one half `aria-hidden`. Here each word is a single node
+ * whose colour comes from a two-stop gradient clipped to the glyphs, and the
+ * wipe is that gradient sliding — so there is one copy of the text, which is
+ * also the honest thing to hand a screen reader.
+ *
+ * The revealed state is the DEFAULT and the animation clips *backwards* from
+ * it. That ordering is deliberate: no-JS, reduced motion, and a bundle that
+ * never arrives all land on fully-black readable text rather than on the grey
+ * base, which is nowhere near enough contrast to be a paragraph's fallback.
  */
 
 interface ScrollRevealTextProps {
@@ -38,17 +55,13 @@ interface ScrollRevealTextProps {
   className?: string;
 }
 
-/** Words per rendered line. The wipe advances one of these at a time. */
-const WORDS_PER_LINE = 7;
-
-export const ScrollRevealText = ({ text, className = "" }: ScrollRevealTextProps) => {
+export const ScrollRevealText = ({
+  text,
+  className = "",
+}: ScrollRevealTextProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  for (let i = 0; i < words.length; i += WORDS_PER_LINE) {
-    lines.push(words.slice(i, i + WORDS_PER_LINE).join(" "));
-  }
+  const words = text.split(/\s+/).filter(Boolean);
 
   useGSAP(
     () => {
@@ -57,65 +70,103 @@ export const ScrollRevealText = ({ text, className = "" }: ScrollRevealTextProps
 
       const mm = gsap.matchMedia();
 
-      // Below md the paragraph is most of the screen, so there's no useful scroll
-      // range to map a per-line wipe onto — it would all happen at once. Reduced
-      // motion opts out for the obvious reason. Either way the CSS default leaves
-      // the text fully revealed, so opting out needs no fallback of its own.
-      mm.add(
-        "(min-width: 768px) and (prefers-reduced-motion: no-preference)",
-        () => {
-          const lineEls = gsap.utils.toArray<HTMLElement>(
-            ".challenge-line-reveal",
-            root
-          );
-          if (!lineEls.length) return;
+      // No width condition any more — see the note at the top. Reduced motion
+      // still opts out, and needs no fallback of its own because the CSS default
+      // is the revealed state.
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const wordEls = gsap.utils.toArray<HTMLElement>(
+          ".reveal-word",
+          root,
+        );
+        if (!wordEls.length) return;
 
-          // One scrubbed timeline, staggered, rather than one ScrollTrigger per
-          // line. The lines share a single scroll range and reveal in sequence
-          // within it, which is what a staggered timeline already expresses;
-          // per-line triggers would each need their own start/end computed from
-          // the line's position and would drift apart on refresh.
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: root,
-              start: "top 80%",
-              end: "bottom 60%",
-              scrub: true,
-            },
-          });
+        // One scrubbed timeline for the whole paragraph rather than one
+        // ScrollTrigger per word. The words share a single scroll range and
+        // sweep in sequence within it; per-word triggers would each need their
+        // own start/end computed from the word's position and would drift apart
+        // on refresh — and there are fifty of them.
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: root,
+            // Starts once the paragraph is properly on screen and finishes
+            // while it still is, so the last word lands before it leaves rather
+            // than after. Works at both ends of the size range: a short block on
+            // a desktop and a tall one on a phone both get most of a viewport
+            // height of scroll to sweep through.
+            start: "top 85%",
+            end: "bottom 55%",
+            scrub: true,
+          },
+        });
 
+        // ── One edge, moving at one speed ──────────────────────────────────
+        //
+        // Two things have to be true for this to read as a single hard edge
+        // travelling through the text, and a plain `stagger` gives neither.
+        //
+        // First, no overlap. A stagger shorter than the tween's duration leaves
+        // several words mid-wipe at once — at 0.45 against a duration of 1 it
+        // was a little over two — so the "edge" was really a two-word gradient
+        // and a word could visibly start before the one before it had finished.
+        // Laying the tweens end to end means exactly one word is ever in flight.
+        //
+        // Second, constant speed. Equal time per word is the obvious way to do
+        // that and it is wrong: a ten-letter word and a two-letter word would
+        // each get the same slice of scroll, so the edge would crawl across the
+        // long ones and snap across the short ones. Giving each word a share of
+        // the timeline proportional to its measured width makes the edge cover
+        // the same number of pixels per unit of scroll all the way through.
+        //
+        // offsetWidth rather than character count because it is exact and costs
+        // one layout pass here — these are reads with no writes between them, so
+        // there is nothing to thrash. Measuring once is safe across breakpoints:
+        // a font-size change at md scales every word, and only the *ratios*
+        // matter.
+        const widths = wordEls.map((el) => el.offsetWidth || 1);
+        const total = widths.reduce((sum, w) => sum + w, 0);
+
+        let at = 0;
+        wordEls.forEach((el, i) => {
+          const share = widths[i] / total;
           tl.fromTo(
-            lineEls,
-            { "--line-progress": "0%" },
+            el,
+            { "--sweep": "100%" },
             {
-              "--line-progress": "100%",
+              "--sweep": "0%",
               // Required, not stylistic: any other ease breaks the 1:1 mapping
-              // between scroll position and wipe position.
+              // between scroll position and wipe position, which is the whole
+              // point of an edge that tracks the scroll.
               ease: "none",
-              // Each line takes 1/n of the range and they don't overlap, which
-              // reproduces the sequential feel of the original.
-              stagger: { each: 1, from: "start" },
-              duration: 1,
-            }
+              duration: share,
+            },
+            // Absolute position, so the tweens butt up against each other
+            // exactly regardless of their differing durations.
+            at,
           );
-        }
-      );
+          at += share;
+        });
+      });
 
       return () => mm.revert();
     },
-    { scope: containerRef, dependencies: [lines.length], revertOnUpdate: true }
+    {
+      scope: containerRef,
+      // Rebuild when the copy changes length — the stagger is built from the
+      // word count, so a different string is a different timeline.
+      dependencies: [words.length],
+      revertOnUpdate: true,
+    },
   );
 
   return (
     <div ref={containerRef} className={className}>
-      {lines.map((line, idx) => (
-        <span key={idx} className="challenge-line">
-          {/* The grey base sits underneath and carries nothing for assistive
-              tech to read twice — the overlay is the aria-hidden copy. */}
-          <span className="challenge-line-base">{line}</span>
-          <span className="challenge-line-reveal" aria-hidden="true">
-            {line}
-          </span>
+      {words.map((word, idx) => (
+        // The spans are inline-block so each can carry its own background, and
+        // the separating spaces are real text nodes between them rather than
+        // margins — which is what keeps wrapping, justification and copy-paste
+        // behaving like ordinary text.
+        <span key={idx}>
+          <span className="reveal-word">{word}</span>{" "}
         </span>
       ))}
     </div>

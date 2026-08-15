@@ -65,7 +65,7 @@ const NavigatorIcon: React.FC = () => {
 
       const rect = node.getBoundingClientRect();
       // A zero-width rect means the element has no layout box, which is how the
-      // header hides this below md (`hidden md:flex` on the parent nav). Checking
+      // header hides this below md (`hidden md:block` on its wrapper). Checking
       // the box rather than window.innerWidth against a hardcoded 768 keeps this
       // correct if that breakpoint ever moves — and without it the angle would be
       // computed from a 0,0 rect and come out as noise.
@@ -99,7 +99,11 @@ const NavigatorIcon: React.FC = () => {
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-6 h-6 md:w-7 md:h-7 text-brand-black"
+        // No colour of its own. The paths fill with `currentColor`, so the
+        // needle inherits whatever the header is currently setting — which is
+        // what lets it turn white over the video and black over the page along
+        // with the links, instead of being a black arrow on a dark hero.
+        className="w-6 h-6 md:w-7 md:h-7"
         style={{ rotate: rotation }}
         aria-hidden="true"
       >

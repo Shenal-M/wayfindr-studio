@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { gsap, useGSAP, ScrollTrigger } from "../lib/gsap";
@@ -14,6 +20,25 @@ import "lenis/dist/lenis.css";
 type Props = {
   children: React.ReactNode;
 };
+
+/**
+ * Access to the Lenis instance, for the rare descendant that needs to stop and
+ * start page scrolling — the mobile menu is the only one today.
+ *
+ * A *ref* rather than the instance itself, deliberately. Lenis is constructed in
+ * a layout effect, so a value passed straight through context would have to be
+ * state, and setting that state would re-render this provider's entire subtree —
+ * which is the whole page — once on every mount, to deliver something nobody
+ * reads during render. A ref object's identity never changes, so there is no
+ * re-render at all, and the consumers that need it read `.current` from an
+ * effect or an event handler, by which time it is populated.
+ *
+ * Null under reduced motion, where Lenis is deliberately never created. Callers
+ * must handle that rather than assuming a page always has smooth scroll to stop.
+ */
+const LenisContext = createContext<React.RefObject<Lenis | null> | null>(null);
+
+export const useLenisRef = () => useContext(LenisContext);
 
 /**
  * Smooth scrolling for the whole site.
@@ -186,7 +211,9 @@ const SmoothScrollProvider: React.FC<Props> = ({ children }) => {
     ScrollTrigger.refresh();
   }, [pathname]);
 
-  return <>{children}</>;
+  return (
+    <LenisContext.Provider value={lenisRef}>{children}</LenisContext.Provider>
+  );
 };
 
 export default SmoothScrollProvider;
