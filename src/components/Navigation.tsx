@@ -11,18 +11,18 @@ import NavigatorIcon from "./NavigatorIcon";
 /**
  * The site header.
  *
- * Two states, and which one shows is decided by NavChrome rather than here:
+ * The bar itself is never visible. What you see is two islands — one behind the
+ * wordmark, one behind the links — and the <header> around them paints nothing
+ * on any route, at any scroll position. Which one of the island surfaces is worn
+ * is decided by NavChrome rather than here; this file only knows how to draw
+ * each of them.
  *
- *   Resolved   A white bar with black links — what every page below the
- *              homepage's first screen wears, and what the site has always used.
- *   Overlaid   Nothing at all: no background, no rule, and links whose colour is
- *              read off the video playing behind them. Only on routes listed in
- *              NavChrome, and only until their hero has scrolled past.
+ * The single exception is the homepage over its clip, where even the islands go
+ * away and the links' colour is read off the frame behind them instead.
  *
- * The border is `border-transparent` while overlaid rather than being removed,
- * so the bar keeps the same box in both states. Otherwise the transition is a
- * 1px reflow of a fixed element sitting on top of a playing video, which reads
- * as a twitch at exactly the moment it is most visible.
+ * There used to be a third state: a full-width white bar with black links, worn
+ * below the hero. It is gone, not merely unrouted — see the header element's own
+ * comment for why leaving the string behind was the actual hazard.
  *
  * `text-[var(--nav-ink)]` is the whole adaptive mechanism: the homepage samples
  * the strip of footage directly behind this bar a few times a second and writes
@@ -272,13 +272,9 @@ const Navigation: React.FC = () => {
   }, [isOpen, lenisRef]);
 
   // While the mobile panel is open the header sits on a white sheet, so it wears
-  // the plain bar's clothes whatever the route asks for.
+  // the plain bar's clothes whatever the route asks for: black type, and no
+  // island, because the panel behind it is already an opaque surface.
   const mode = isOpen ? "bar" : treatment;
-  const overlaid = mode !== "bar";
-
-  const bar = overlaid
-    ? "bg-transparent border-b border-transparent"
-    : "bg-brand-white/85 backdrop-blur-md border-b border-brand-border";
 
   // A constant on both islands, because their surface guarantees the contrast
   // rather than hoping for it — see the two fills above. Only `adaptive`, which
@@ -337,16 +333,24 @@ const Navigation: React.FC = () => {
   return (
     <>
       <header
-        // The colour transition is what carries the bar between its two states
-        // as the hero leaves. Its duration is deliberately long: the change is a
-        // whole bar appearing, and anything quick reads as a flicker.
+        // The bar itself never paints. Everything visible in this header is one
+        // of the two islands; the element around them is a positioning context
+        // and nothing else, on every route and at every scroll position.
         //
-        // Transparent while the menu is open, so the panel behind it is one
-        // uninterrupted white surface rather than a white sheet with a slightly
-        // different white strip across the top.
-        className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-500 motion-reduce:transition-none ${
-          isOpen ? "bg-transparent border-b border-transparent" : bar
-        }`}
+        // It used to switch to `bg-brand-white/85 backdrop-blur-md border-b` once
+        // a hero had scrolled past — the site's original header — and that string
+        // is deliberately gone rather than left behind an unreachable branch.
+        // Since every route holds islands the whole way down, the only thing that
+        // could still have selected it was the context default in NavChrome, i.e.
+        // a Navigation rendered with no provider above it. Which is to say the
+        // one remaining way to see a full-width white bar was a bug, so the fix
+        // is to make it unrepresentable rather than merely unreachable.
+        //
+        // The border stays as `border-transparent` rather than being dropped, so
+        // the box keeps identical geometry in every state. Removing it would make
+        // any future change to this element a 1px reflow of a fixed bar over
+        // playing video, which reads as a twitch at the worst possible moment.
+        className="fixed top-0 left-0 right-0 z-50 bg-transparent border-b border-transparent"
       >
         {/* h-16 here plus the 1px border is the 65px that SiteMain reserves as
             top padding on every non-overlaid route, and that the homepage's

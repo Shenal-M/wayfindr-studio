@@ -61,8 +61,12 @@ import {
  *                 routes to it; kept as a one-word alternative for a page that
  *                 turns out to want black chrome.
  *
- *   bar           The old full-width white bar. Only the open mobile menu uses
- *                 it now, where the panel behind is a white sheet.
+ *   bar           No longer a bar. Nothing in the header paints white any more —
+ *                 the full-width surface this named was removed from
+ *                 Navigation.tsx. It survives as the marker for "the mobile
+ *                 panel is open", which wants black type and no island because
+ *                 the panel behind the header is already an opaque white sheet.
+ *                 No route can select it.
  *
  * One treatment for the whole site is the point rather than a simplification.
  * Per-route chrome meant the header changed identity as you moved around, and
@@ -120,8 +124,26 @@ type NavChromeValue = {
   reserveTop: boolean;
 };
 
+/**
+ * The default is what a consumer gets with no provider above it, which should
+ * never happen — and is exactly why it has to be a safe value rather than an
+ * obviously-wrong one.
+ *
+ * It used to be `bar`, back when that was a real treatment. Once every route
+ * moved to islands, `bar` stopped being reachable through any route and this
+ * default became the only thing that could still select it: a full-width white
+ * header, on a page whose first screen is a video, from a value nothing was
+ * choosing on purpose. `islandsDark` is what every route resolves to anyway, so
+ * a missing provider now degrades to the ordinary header instead of to a state
+ * the design no longer contains.
+ *
+ * `reserveTop: true` is the safe direction for the other half: reserving the
+ * header's height when it was not needed leaves a strip of page background above
+ * the hero, which is ugly; *not* reserving it when it was needed puts the first
+ * line of every page underneath the chrome, which is unreadable.
+ */
 const NavChromeContext = createContext<NavChromeValue>({
-  treatment: "bar",
+  treatment: "islandsDark",
   reserveTop: true,
 });
 
