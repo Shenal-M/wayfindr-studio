@@ -352,10 +352,10 @@ const Navigation: React.FC = () => {
         // playing video, which reads as a twitch at the worst possible moment.
         className="fixed top-0 left-0 right-0 z-50 bg-transparent border-b border-transparent"
       >
-        {/* h-16 here plus the 1px border is the 65px that SiteMain reserves as
-            top padding on every non-overlaid route, and that the homepage's
-            hero carries internally. Three numbers, one source — change this and
-            both follow from it. */}
+        {/* h-16 here plus the 1px border is the 65px that globals.css reserves
+            on <main> for every route without a hero, that the homepage's hero
+            carries internally, and that NAV_H names for the sampler. Four
+            numbers, one source — change this and the rest follow from it. */}
         <div className="max-w-[1920px] mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
           {/* The left island. */}
           <Link

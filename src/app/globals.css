@@ -111,6 +111,51 @@ body {
   }
 }
 
+/* ── Clearance under the fixed header ──────────────────────────────────────
+   The header is `position: fixed`, so it is out of flow and the first thing on
+   a page would otherwise start underneath it. <main> reserves its height —
+   4rem for `h-16` plus the 1px border; a plain 4rem leaves content sitting one
+   pixel under the rule.
+
+   Except on the routes that open on full-bleed media. There the media is meant
+   to run to the very top of the document and pass *behind* the chrome, so
+   reserving anything above it shows through the transparent header as a band of
+   page background. Those heroes carry their own clearance internally (the
+   homepage's `pt-16`), so the film starts at y=0 and the headline still sits
+   below the bar.
+
+   ── WHY THIS IS CSS AND NOT REACT ──
+   This was a `reserveTop` boolean on the NavChrome context, derived from
+   `usePathname()` in a client component, and that is what put a white band
+   across the top of the homepage and the case studies on Vercel — present on
+   every fresh load, then gone for the rest of the session once any navigation
+   forced a re-render. The band looked empty rather than like a bar because the
+   homepage's links are white by default, so they were white-on-white inside it.
+
+   Deriving it in React makes a first-paint layout decision depend on hydration:
+   the value has to be identical in the prerender and in the client's first
+   render, and if it is ever not, the wrong padding is committed and nothing
+   re-renders to correct it. `:has()` asks the browser a question it can answer
+   from the document itself — is there a hero inside this main? — during the
+   first style resolution, before any JavaScript. It cannot be a frame late, it
+   cannot disagree with itself between server and client, and it survives the
+   bundle failing to load entirely.
+
+   The marker is the same `data-nav-hero` the header already uses to find the
+   media it sits over, so a page still declares this exactly once.
+
+   `:has()` is baseline across browsers; anything without it falls back to the
+   reserved padding, which is the safe direction — a band above the hero is
+   ugly, whereas the reverse puts the first line of every ordinary page under
+   the chrome. */
+main[data-site-main] {
+  padding-top: calc(4rem + 1px);
+}
+
+main[data-site-main]:has([data-nav-hero]) {
+  padding-top: 0;
+}
+
 .anim .reveal-init {
   opacity: 0;
   transform: translateY(var(--reveal-y));

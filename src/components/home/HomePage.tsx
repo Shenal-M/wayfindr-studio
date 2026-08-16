@@ -43,11 +43,13 @@ import type {
  * both pulled the page away from the studio's actual language. The blue stops
  * reading as *the* colour the moment anything competes with it.
  *
- * On the header: this page is the reason NavChrome exists. The bar is
- * transparent over the film and resolves to the site's white one as the hero
- * leaves, and its link colour is sampled from the footage itself. The header
- * belongs to (site)/layout.tsx and the video belongs here, so the two facts
- * travel through that context.
+ * On the header: this page is the reason NavChrome exists. Over the film it is
+ * type and nothing else — no island, no bar — with its colour sampled from the
+ * footage, and it picks up the site's ordinary islands once the hero leaves. The
+ * header belongs to (site)/layout.tsx and the video belongs here, so that fact
+ * travels through NavChrome's context. The hero's `data-nav-hero` marker is the
+ * other half: it is what the sampler finds, and what globals.css tests for to
+ * know this route's <main> must not reserve the header's height.
  */
 
 type Props = {
@@ -621,7 +623,7 @@ const HomePage: React.FC<Props> = ({
   );
 
   return (
-    // No `pt-*` anywhere above the hero, which is the whole reason SiteMain
+    // No `pt-*` anywhere above the hero, which is the whole reason the layout
     // drops its padding on this route. That padding is what normally stops the
     // first section sliding under the fixed header, and it is exactly wrong
     // here: the header is transparent over the hero, so anything reserved above

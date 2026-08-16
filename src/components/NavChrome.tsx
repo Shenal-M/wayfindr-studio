@@ -102,26 +102,9 @@ const chromeForRoute = (pathname: string): RouteChrome => {
   return { top: "islandsDark", resolved: "islandsDark" };
 };
 
-/**
- * Whether this route opens on full-bleed media running to the very top of the
- * document — which is the only reason <main> would skip the header's height.
- *
- * Deliberately a separate question from the treatment. Every page has islands
- * now, so "has a box for a header" no longer implies "has something behind it";
- * an ordinary page still needs its content to start *below* the chrome rather
- * than underneath it.
- *
- * `/work` itself is absent because the pattern requires a segment after it. The
- * index is an ordinary page with a heading at the top, not a hero.
- */
-const hasTopMedia = (pathname: string) =>
-  pathname === "/" || /^\/work\/[^/]+$/.test(pathname);
-
 type NavChromeValue = {
   /** What the header should render this frame. */
   treatment: NavTreatment;
-  /** Whether <main> has to reserve the header's height as top padding. */
-  reserveTop: boolean;
 };
 
 /**
@@ -136,15 +119,9 @@ type NavChromeValue = {
  * choosing on purpose. `islandsDark` is what every route resolves to anyway, so
  * a missing provider now degrades to the ordinary header instead of to a state
  * the design no longer contains.
- *
- * `reserveTop: true` is the safe direction for the other half: reserving the
- * header's height when it was not needed leaves a strip of page background above
- * the hero, which is ugly; *not* reserving it when it was needed puts the first
- * line of every page underneath the chrome, which is unreadable.
  */
 const NavChromeContext = createContext<NavChromeValue>({
   treatment: "islandsDark",
-  reserveTop: true,
 });
 
 export const useNavChrome = () => useContext(NavChromeContext);
@@ -303,9 +280,8 @@ export const NavChromeProvider: React.FC<{ children: React.ReactNode }> = ({
       // A persistent route ignores `atTop` entirely — its two states are the
       // same one, so there is nothing for scroll to choose between.
       treatment: persistent || atTop ? topTreatment : resolved,
-      reserveTop: !hasTopMedia(pathname),
     }),
-    [topTreatment, resolved, persistent, atTop, pathname],
+    [topTreatment, resolved, persistent, atTop],
   );
 
   return (
@@ -316,29 +292,15 @@ export const NavChromeProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 /**
- * The page's <main>, which needs the header's height as top padding on every
- * route except the overlaid ones.
+ * `SiteMain` used to live here: a client component that read `reserveTop` off
+ * this context and put the header's height on <main> as top padding, except on
+ * the routes whose hero runs to the top of the document.
  *
- * That padding is what stops content sliding under a fixed header, and it is
- * exactly wrong when the header has no bar: anything reserved above the hero
- * shows through as a strip of page background. On the homepage that put a white
- * band across the top of the video. An overlaid hero carries whatever clearance
- * it needs internally instead, so the media starts at y=0 and runs behind the
- * chrome while the content still sits below it.
- *
- * A client component purely to read the context — it renders one element and
- * holds no state of its own.
+ * It is gone, and the padding is now two rules in globals.css keyed off
+ * `main:has([data-nav-hero])`. See the comment there — the short version is that
+ * deriving it from the pathname on the client was the bug: it made the padding a
+ * hydration-timing question, and it only had to be wrong for the first render to
+ * strand a white band above the hero until something else forced a re-render.
+ * The browser can answer "is there a hero inside this main?" from the document
+ * itself, before the first paint, with no JavaScript involved at all.
  */
-export const SiteMain: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { reserveTop } = useNavChrome();
-
-  return (
-    // 4rem + 1px is the header's h-16 plus its bottom border. A plain 4rem
-    // leaves content sitting one pixel under the rule.
-    <main className={`grow ${reserveTop ? "pt-[calc(4rem+1px)]" : ""}`}>
-      {children}
-    </main>
-  );
-};

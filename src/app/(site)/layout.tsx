@@ -1,6 +1,6 @@
 import React from "react";
 import Navigation from "../../components/Navigation";
-import { NavChromeProvider, SiteMain } from "../../components/NavChrome";
+import { NavChromeProvider } from "../../components/NavChrome";
 import FooterAlt from "../../components/FooterAlt";
 import SmoothScrollProvider from "../../components/SmoothScrollProvider";
 import ScrollRevealProvider from "../../components/ScrollRevealProvider";
@@ -117,9 +117,17 @@ export default async function SiteLayout({
             {/* Reserves the fixed header's height as top padding — except on
                 routes whose first screen is meant to run underneath it, where
                 that padding would show through the transparent bar as a strip
-                of page background. SiteMain reads which case it is from
-                NavChrome. */}
-            <SiteMain>{children}</SiteMain>
+                of page background.
+
+                Which case applies is decided in globals.css, by whether this
+                element contains a `[data-nav-hero]`, rather than by a client
+                component reading the pathname. It stays a plain server-rendered
+                <main> for that reason — the distinction is a styling question
+                the browser can answer on its own, and routing it through React
+                is what made it a hydration-timing bug. */}
+            <main data-site-main className="grow">
+              {children}
+            </main>
             {/* Unchanged, deliberately. The homepage was rebuilt around it
                 rather than bringing its own closing block, so every page still
                 ends the same way. */}
