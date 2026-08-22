@@ -218,14 +218,46 @@ export const NavChromeProvider: React.FC<{ children: React.ReactNode }> = ({
         // should not change a decision that is only about the hero's bottom edge.
         onEnter: () => setAtTop(false),
         onLeaveBack: () => setAtTop(true),
+        // The initial sync, and every re-sync after it — and the fact that it is
+        // this callback rather than a measurement of our own is the whole fix for
+        // a bug that survived several attempts.
+        //
+        // It used to be a line after this create() call:
+        //
+        //     setAtTop(hero.getBoundingClientRect().bottom > NAV_H);
+        //
+        // which reads the same edge the trigger reads, but computes it
+        // independently — a live rect against the current scroll, versus the
+        // document position ScrollTrigger resolved `bottom top+=NAV_H` to at its
+        // last refresh. Nearly always the same answer, and free to disagree the
+        // moment the layout is still settling: on a first load the fonts swap,
+        // the images decode and the pinned rail inserts its spacer, all after
+        // this effect has run.
+        //
+        // A disagreement there is not a brief wrong frame, it is a permanent one,
+        // and that is the part worth understanding. Say our measurement concludes
+        // `false` while ScrollTrigger has its start above the current scroll.
+        // Nothing can put it right: `onEnter` will not fire, because by the
+        // trigger's reckoning the start was never crossed going down; and
+        // `onLeaveBack` will not fire either, because we are already on the near
+        // side of it. The header is stuck wearing its resolved islands over the
+        // hero until the reader physically scrolls past the start and back up
+        // again, which is the only thing that generates the crossing — exactly
+        // the symptom, and exactly the reported cure. A route change looked like
+        // a cure too, for a duller reason: the effect re-runs and re-measures, by
+        // which point the layout has stopped moving.
+        //
+        // `onRefresh` closes it by construction, because there is only one number
+        // left. It fires when the trigger is created and again on every refresh —
+        // fonts, images, resize, route change — so the state is always re-derived
+        // from the same `start` the callbacks are keyed to, and a layout that
+        // settles late corrects itself instead of stranding a stale verdict.
+        //
+        // Deliberately not `self.isActive`, which is false both before the start
+        // and after the end and so cannot tell the top of the page from the
+        // footer. `scroll() < start` asks only about the edge that matters.
+        onRefresh: (self) => setAtTop(self.scroll() < self.start),
       });
-
-      // Sync once on creation, measured directly rather than read off the
-      // trigger. `self.isActive` is false both before the start and after the
-      // end, so a load that restored a scroll position near the footer would
-      // report exactly the same thing as a load at the very top — which is the
-      // bug above, arriving a different way.
-      setAtTop(hero.getBoundingClientRect().bottom > NAV_H);
 
       // ── Reading the media ─────────────────────────────────────────────────
       // `adaptive` only, by the early return above. `islands` needs none of it:
